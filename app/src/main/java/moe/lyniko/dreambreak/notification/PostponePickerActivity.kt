@@ -52,6 +52,7 @@ class PostponePickerActivity : ComponentActivity() {
             }
             DreamBreakTheme(darkTheme = darkTheme) {
                 PostponePickerScreen(
+                    options = settings.preferences.postponeFor,
                     onSelect = { seconds ->
                         BreakRuntime.postponeBreakForSeconds(seconds)
                         finish()
@@ -65,16 +66,10 @@ class PostponePickerActivity : ComponentActivity() {
 
 @Composable
 private fun PostponePickerScreen(
+    options: List<Int>,
     onSelect: (Int) -> Unit,
     onCancel: () -> Unit,
 ) {
-    val options = listOf(
-        60 to R.string.postpone_option_1m,
-        5 * 60 to R.string.postpone_option_5m,
-        15 * 60 to R.string.postpone_option_15m,
-        30 * 60 to R.string.postpone_option_30m,
-    )
-
     Scaffold { innerPadding ->
         Column(
             modifier = Modifier
@@ -100,7 +95,7 @@ private fun PostponePickerScreen(
                         .padding(14.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    options.forEach { (seconds, labelRes) ->
+                    options.forEach { seconds ->
                         Button(
                             onClick = { onSelect(seconds) },
                             modifier = Modifier.fillMaxWidth(),
@@ -108,7 +103,7 @@ private fun PostponePickerScreen(
                             contentPadding = PaddingValues(vertical = 14.dp),
                         ) {
                             Text(
-                                text = stringResource(labelRes),
+                                text = formatPostponeOption(seconds),
                                 style = MaterialTheme.typography.titleMedium,
                             )
                         }
@@ -126,5 +121,13 @@ private fun PostponePickerScreen(
                 Text(stringResource(R.string.action_cancel))
             }
         }
+    }
+}
+
+private fun formatPostponeOption(seconds: Int): String {
+    return when {
+        seconds % 3600 == 0 -> "${seconds / 3600}h"
+        seconds % 60 == 0 -> "${seconds / 60}m"
+        else -> "${seconds}s"
     }
 }

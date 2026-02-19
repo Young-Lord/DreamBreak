@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">护眼休息</string>
     <string name="notification_channel_name">休息提醒</string>
+    <string name="notification_channel_pre_break_name">休息前提醒</string>
     <string name="notification_title">护眼提醒已开启</string>
     <string name="notification_title_breaking">正在休息中</string>
     <string name="notification_title_countdown">距离下次休息 %1$s</string>
@@ -17,6 +18,8 @@
     <string name="home_countdown">下次休息倒计时 %1$s</string>
     <string name="home_since_last">上次休息后已过 %1$s</string>
     <string name="home_status">当前状态 %1$s</string>
+    <string name="home_next_small_break">下次小休 %1$s</string>
+    <string name="home_next_big_break">下次大休 %1$s</string>
     <string name="home_app_enabled">启用 DreamBreak</string>
     <string name="home_app_status_on">运行中</string>
     <string name="home_app_status_off">已停止</string>
@@ -45,6 +48,7 @@
     <string name="settings_reminder">Reminder</string>
     <string name="settings_pause">Pause</string>
     <string name="settings_overlay">遮盖</string>
+    <string name="settings_notification">通知</string>
     <string name="settings_general">General</string>
     <string name="settings_theme_mode">主题</string>
     <string name="settings_theme_mode_follow_system">跟随系统</string>
@@ -57,9 +61,11 @@
     <string name="settings_enable_big_break">启用大休息</string>
     <string name="settings_big_break_disabled_hint">大休息已关闭。</string>
     <string name="settings_flash_for">顶部闪窗时长（秒）</string>
-    <string name="settings_postpone_for">延后时长（秒）</string>
-    <string name="settings_reset_interval_after_pause">暂停后重置间隔阈值（秒）</string>
-    <string name="settings_reset_cycle_after_pause">暂停后重置周期阈值（秒）</string>
+    <string name="settings_top_flash_enabled">休息前弹窗提醒</string>
+    <string name="settings_top_flash_lead_seconds">弹窗提前秒数</string>
+    <string name="settings_top_flash_small_message">小休弹窗提示语</string>
+    <string name="settings_top_flash_big_message">大休弹窗提示语</string>
+    <string name="settings_postpone_for">延后时长列表（秒，逗号分隔）</string>
     <string name="settings_pause_selected_apps">在这些应用中暂停计时</string>
     <string name="settings_show_submenu">显示二级菜单</string>
     <string name="settings_open_app_subpage">打开二级页面</string>
@@ -75,6 +81,14 @@
     <string name="settings_overlay_preview">遮盖预览</string>
     <string name="settings_auto_start_on_boot">开机自启动</string>
     <string name="settings_persistent_notification">常驻通知</string>
+    <string name="settings_persistent_notification_update_frequency">持久通知更新频率（秒）</string>
+    <string name="settings_pre_break_notification">休息前通知</string>
+    <string name="settings_pre_break_notification_lead_seconds">通知提前秒数</string>
+    <string name="settings_pre_break_notification_small_title">小休通知标题</string>
+    <string name="settings_pre_break_notification_small_content">小休通知内容</string>
+    <string name="settings_pre_break_notification_big_title">大休通知标题</string>
+    <string name="settings_pre_break_notification_big_content">大休通知内容</string>
+    <string name="settings_open_pre_break_notification_channel">打开休息前通知系统设置</string>
     <string name="action_back">返回</string>
     <string name="settings_lang_hint">当前先支持中文，英文等后续加。</string>
     <string name="settings_no_usage_access">未授予使用情况访问权限，无法自动识别前台应用暂停。</string>

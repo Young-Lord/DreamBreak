@@ -24,6 +24,7 @@ data class BreakUiState(
     val onboardingCompleted: Boolean = false,
     val excludeFromRecents: Boolean = false,
     val persistentNotificationEnabled: Boolean = false,
+    val persistentNotificationUpdateFrequencySeconds: Int = 10,
     val themeMode: AppThemeMode = AppThemeMode.FOLLOW_SYSTEM,
 )
 
@@ -143,6 +144,13 @@ object BreakRuntime {
         _uiState.value = current.copy(persistentNotificationEnabled = enabled)
     }
 
+    fun setPersistentNotificationUpdateFrequencySeconds(value: Int) {
+        val current = _uiState.value
+        _uiState.value = current.copy(
+            persistentNotificationUpdateFrequencySeconds = value.coerceIn(1, 600)
+        )
+    }
+
     fun setThemeMode(mode: AppThemeMode) {
         val current = _uiState.value
         _uiState.value = current.copy(themeMode = mode)
@@ -234,6 +242,7 @@ object BreakRuntime {
         onboardingCompleted: Boolean,
         excludeFromRecents: Boolean,
         persistentNotificationEnabled: Boolean,
+        persistentNotificationUpdateFrequencySeconds: Int,
         themeMode: AppThemeMode,
     ) {
         val current = _uiState.value
@@ -248,6 +257,8 @@ object BreakRuntime {
             onboardingCompleted = onboardingCompleted,
             excludeFromRecents = excludeFromRecents,
             persistentNotificationEnabled = persistentNotificationEnabled,
+            persistentNotificationUpdateFrequencySeconds =
+                persistentNotificationUpdateFrequencySeconds.coerceIn(1, 600),
             themeMode = themeMode,
             state = current.state.copy(
                 secondsToNextBreak = current.state.secondsToNextBreak.coerceAtMost(preferences.smallEvery)

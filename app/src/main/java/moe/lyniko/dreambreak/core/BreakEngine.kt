@@ -2,6 +2,15 @@ package moe.lyniko.dreambreak.core
 
 import kotlin.math.max
 
+const val DEFAULT_TOP_FLASH_SECONDS = 8
+const val DEFAULT_PRE_BREAK_NOTIFICATION_SECONDS = 30
+const val DEFAULT_TOP_FLASH_SMALL_TEXT = "Break is coming, please wrap up"
+const val DEFAULT_TOP_FLASH_BIG_TEXT = "Big break is coming, please wrap up"
+const val DEFAULT_PRE_BREAK_SMALL_TITLE = "Small break is coming"
+const val DEFAULT_PRE_BREAK_SMALL_CONTENT = "Please wrap up current work."
+const val DEFAULT_PRE_BREAK_BIG_TITLE = "Big break is coming"
+const val DEFAULT_PRE_BREAK_BIG_CONTENT = "Please wrap up current work."
+
 enum class SessionMode {
     NORMAL,
     PAUSED,
@@ -26,10 +35,17 @@ data class BreakPreferences(
     val smallFor: Int = 20,
     val bigAfter: Int = 3,
     val bigFor: Int = 60,
-    val flashFor: Int = 8,
-    val postponeFor: Int = 5 * 60,
-    val resetIntervalAfterPause: Int = 20 * 60,
-    val resetCycleAfterPause: Int = 40 * 60,
+    val flashFor: Int = DEFAULT_TOP_FLASH_SECONDS,
+    val topFlashEnabled: Boolean = true,
+    val topFlashSmallText: String = DEFAULT_TOP_FLASH_SMALL_TEXT,
+    val topFlashBigText: String = DEFAULT_TOP_FLASH_BIG_TEXT,
+    val preBreakNotificationEnabled: Boolean = false,
+    val preBreakNotificationLeadSeconds: Int = DEFAULT_PRE_BREAK_NOTIFICATION_SECONDS,
+    val preBreakNotificationSmallTitle: String = DEFAULT_PRE_BREAK_SMALL_TITLE,
+    val preBreakNotificationSmallContent: String = DEFAULT_PRE_BREAK_SMALL_CONTENT,
+    val preBreakNotificationBigTitle: String = DEFAULT_PRE_BREAK_BIG_TITLE,
+    val preBreakNotificationBigContent: String = DEFAULT_PRE_BREAK_BIG_CONTENT,
+    val postponeFor: List<Int> = DEFAULT_POSTPONE_DURATIONS_SECONDS,
 )
 
 data class BreakState(
@@ -99,26 +115,13 @@ object BreakEngine {
             return state.copy(pauseReasons = emptySet())
         }
 
-        val resetInterval = state.secondsPaused >= preferences.resetIntervalAfterPause
-        val resetCycle = state.secondsPaused >= preferences.resetCycleAfterPause
-
         val resumedMode = state.modeBeforePause ?: SessionMode.NORMAL
-        var resumedState = state.copy(
+        return state.copy(
             mode = resumedMode,
             modeBeforePause = null,
             pauseReasons = emptySet(),
             secondsPaused = 0,
         )
-
-        if (resetInterval && resumedMode == SessionMode.NORMAL) {
-            resumedState = resumedState.copy(secondsToNextBreak = preferences.smallEvery)
-        }
-
-        if (resetCycle && resumedMode == SessionMode.NORMAL) {
-            resumedState = resumedState.copy(breakCycleCount = 0)
-        }
-
-        return resumedState
     }
 
     fun requestBreakNow(state: BreakState, preferences: BreakPreferences, bigBreak: Boolean = false): BreakState {
@@ -126,7 +129,8 @@ object BreakEngine {
     }
 
     fun postponeBreak(state: BreakState, preferences: BreakPreferences): BreakState {
-        return postponeBreakForSeconds(state, preferences.postponeFor)
+        val defaultPostponeSeconds = preferences.postponeFor.firstOrNull() ?: DEFAULT_POSTPONE_DURATION_SECONDS
+        return postponeBreakForSeconds(state, defaultPostponeSeconds)
     }
 
     fun postponeBreakForSeconds(state: BreakState, seconds: Int): BreakState {
@@ -184,7 +188,7 @@ object BreakEngine {
             BreakPhase.PROMPT -> {
                 val elapsed = state.promptSecondsElapsed + 1
                 val idleInPauseReasons = state.pauseReasons.contains(PauseReason.IDLE)
-                if (elapsed >= preferences.flashFor || idleInPauseReasons) {
+                if (elapsed >= preferences.flashFor.coerceAtLeast(1) || idleInPauseReasons || !preferences.topFlashEnabled) {
                     state.copy(
                         phase = BreakPhase.FULL_SCREEN,
                         promptSecondsElapsed = elapsed,
@@ -219,6 +223,18 @@ object BreakEngine {
     ): BreakState {
         val currentCycle = state.breakCycleCount + 1
         val shouldUseBigBreak = forceBigBreak || (preferences.bigAfter > 0 && currentCycle % preferences.bigAfter == 0)
+        if (!preferences.topFlashEnabled || preferences.flashFor <= 0) {
+            return state.copy(
+                mode = SessionMode.BREAK,
+                phase = BreakPhase.FULL_SCREEN,
+                isBigBreak = shouldUseBigBreak,
+                promptSecondsElapsed = 0,
+                breakSecondsRemaining = if (shouldUseBigBreak) preferences.bigFor else preferences.smallFor,
+                breakCycleCount = currentCycle,
+                secondsToNextBreak = 0,
+            )
+        }
+
         return state.copy(
             mode = SessionMode.BREAK,
             phase = BreakPhase.PROMPT,

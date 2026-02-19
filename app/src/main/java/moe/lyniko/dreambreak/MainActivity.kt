@@ -86,6 +86,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -102,6 +103,9 @@ import moe.lyniko.dreambreak.core.BreakPreferences
 import moe.lyniko.dreambreak.core.BreakRuntime
 import moe.lyniko.dreambreak.core.BreakState
 import moe.lyniko.dreambreak.core.SessionMode
+import moe.lyniko.dreambreak.core.formatPostponeDurations
+import moe.lyniko.dreambreak.core.normalizePostponeDurationInput
+import moe.lyniko.dreambreak.core.parsePostponeDurations
 import moe.lyniko.dreambreak.data.AppSettings
 import moe.lyniko.dreambreak.data.AppThemeMode
 import moe.lyniko.dreambreak.data.SettingsStore
@@ -109,6 +113,7 @@ import moe.lyniko.dreambreak.monitor.ForegroundAppMonitor
 import moe.lyniko.dreambreak.monitor.InstalledApp
 import moe.lyniko.dreambreak.monitor.InstalledAppsProvider
 import moe.lyniko.dreambreak.notification.BreakReminderService
+import moe.lyniko.dreambreak.notification.PostponePickerActivity
 import moe.lyniko.dreambreak.overlay.BreakOverlayController
 import moe.lyniko.dreambreak.ui.theme.DreamBreakTheme
 
@@ -180,6 +185,24 @@ class MainActivity : ComponentActivity() {
                 runCatching { context.startActivity(fallbackIntent) }
             }
         }
+
+        fun openNotificationChannelSettings(context: Context, channelId: String) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+                openNotificationSettings(context)
+                return
+            }
+
+            val channelIntent = Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
+                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                putExtra(Settings.EXTRA_CHANNEL_ID, channelId)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            runCatching {
+                context.startActivity(channelIntent)
+            }.onFailure {
+                openNotificationSettings(context)
+            }
+        }
     }
 }
 
@@ -223,6 +246,7 @@ fun DreamBreakApp() {
                 onboardingCompleted = settings.onboardingCompleted,
                 excludeFromRecents = settings.excludeFromRecents,
                 persistentNotificationEnabled = settings.persistentNotificationEnabled,
+                persistentNotificationUpdateFrequencySeconds = settings.persistentNotificationUpdateFrequencySeconds,
                 themeMode = settings.themeMode,
             )
             settingsLoaded = true
@@ -240,6 +264,7 @@ fun DreamBreakApp() {
         uiState.onboardingCompleted,
         uiState.excludeFromRecents,
         uiState.persistentNotificationEnabled,
+        uiState.persistentNotificationUpdateFrequencySeconds,
         uiState.themeMode,
         settingsLoaded,
     ) {
@@ -259,6 +284,7 @@ fun DreamBreakApp() {
                 onboardingCompleted = uiState.onboardingCompleted,
                 excludeFromRecents = uiState.excludeFromRecents,
                 persistentNotificationEnabled = uiState.persistentNotificationEnabled,
+                persistentNotificationUpdateFrequencySeconds = uiState.persistentNotificationUpdateFrequencySeconds,
                 themeMode = uiState.themeMode,
             )
         )
@@ -350,7 +376,9 @@ fun DreamBreakApp() {
                             onAppEnabledChange = { BreakRuntime.setAppEnabled(it) },
                             onBreakNow = { BreakRuntime.requestBreakNow() },
                             onBigBreakNow = { BreakRuntime.requestBreakNow(bigBreak = true) },
-                            onPostpone = { BreakRuntime.postponeBreak() },
+                            onPostpone = {
+                                context.startActivity(Intent(context, PostponePickerActivity::class.java))
+                            },
                         )
 
                         AppDestinations.SETTINGS -> SettingsPage(
@@ -364,6 +392,8 @@ fun DreamBreakApp() {
                             overlayBackgroundUri = uiState.overlayBackgroundUri,
                             excludeFromRecents = uiState.excludeFromRecents,
                             persistentNotificationEnabled = uiState.persistentNotificationEnabled,
+                            persistentNotificationUpdateFrequencySeconds =
+                                uiState.persistentNotificationUpdateFrequencySeconds,
                             themeMode = uiState.themeMode,
                             onPreferencesChange = { BreakRuntime.updatePreferences(it) },
                             onPauseInListedAppsChange = { BreakRuntime.setPauseInListedApps(it) },
@@ -383,6 +413,15 @@ fun DreamBreakApp() {
                                     BreakRuntime.setPersistentNotificationEnabled(false)
                                     MainActivity.openNotificationSettings(context)
                                 }
+                            },
+                            onPersistentNotificationUpdateFrequencySecondsChange = {
+                                BreakRuntime.setPersistentNotificationUpdateFrequencySeconds(it)
+                            },
+                            onOpenPreBreakNotificationChannelSettings = {
+                                MainActivity.openNotificationChannelSettings(
+                                    context,
+                                    BreakReminderService.PRE_BREAK_CHANNEL_ID,
+                                )
                             },
                         )
                     }
@@ -692,6 +731,7 @@ private fun HomePage(
         targetValue = if (appEnabled) Color(0xFF0072B2) else Color(0xFFD55E00),
         label = "homeToggleBackgroundColor",
     )
+    val nextBreaks = remember(state, preferences) { buildHomeNextBreaks(state, preferences) }
 
     Column(
         modifier = Modifier
@@ -729,9 +769,17 @@ private fun HomePage(
                 )
             }
         }
-        Text(stringResource(R.string.home_countdown, formatSeconds(state.secondsToNextBreak)), style = MaterialTheme.typography.headlineSmall)
-        Text(stringResource(R.string.home_since_last, formatSeconds(state.secondsSinceLastBreak)))
-        Text(stringResource(R.string.home_status, modeLabel(state.mode)))
+        nextBreaks.forEachIndexed { index, item ->
+            val labelRes = if (item.isBigBreak) {
+                R.string.home_next_big_break
+            } else {
+                R.string.home_next_small_break
+            }
+            Text(
+                text = stringResource(labelRes, formatMinutesSecondsNoLeadingZero(item.secondsUntil)),
+                style = if (index == 0) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.titleMedium,
+            )
+        }
 
         ActionButton(
             text = stringResource(R.string.action_small_break),
@@ -748,7 +796,7 @@ private fun HomePage(
             )
         }
         ActionButton(
-            text = stringResource(R.string.action_postpone_5m),
+            text = stringResource(R.string.action_postpone),
             icon = Icons.Default.Home,
             onClick = onPostpone,
             enabled = appEnabled,
@@ -768,6 +816,7 @@ private fun SettingsPage(
     overlayBackgroundUri: String,
     excludeFromRecents: Boolean,
     persistentNotificationEnabled: Boolean,
+    persistentNotificationUpdateFrequencySeconds: Int,
     themeMode: AppThemeMode,
     onPreferencesChange: (BreakPreferences) -> Unit,
     onPauseInListedAppsChange: (Boolean) -> Unit,
@@ -779,8 +828,11 @@ private fun SettingsPage(
     onExcludeFromRecentsChange: (Boolean) -> Unit,
     onThemeModeChange: (AppThemeMode) -> Unit,
     onPersistentNotificationEnabledChange: (Boolean) -> Unit,
+    onPersistentNotificationUpdateFrequencySecondsChange: (Int) -> Unit,
+    onOpenPreBreakNotificationChannelSettings: () -> Unit,
 ) {
     val context = LocalContext.current
+    val defaultPreferences = remember { BreakPreferences() }
     var appSearch by remember { mutableStateOf("") }
     var openSubPage by remember { mutableStateOf(false) }
     var overlayPreviewVisible by remember { mutableStateOf(false) }
@@ -830,6 +882,9 @@ private fun SettingsPage(
             appEnabled = true,
             overlayBackgroundUri = overlayBackgroundUri,
             overlayTransparencyPercent = overlayTransparencyPercent,
+            postponeOptions = preferences.postponeFor,
+            topFlashSmallText = preferences.topFlashSmallText,
+            topFlashBigText = preferences.topFlashBigText,
         )
     }
 
@@ -884,6 +939,7 @@ private fun SettingsPage(
             value = preferences.smallEvery / 60,
             minValue = 1,
             maxValue = 720,
+            defaultValue = defaultPreferences.smallEvery / 60,
             onValueChange = { onPreferencesChange(preferences.copy(smallEvery = it * 60)) },
         )
         NumberInputField(
@@ -891,6 +947,7 @@ private fun SettingsPage(
             value = preferences.smallFor,
             minValue = 5,
             maxValue = 1800,
+            defaultValue = defaultPreferences.smallFor,
             onValueChange = { onPreferencesChange(preferences.copy(smallFor = it)) },
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -913,6 +970,7 @@ private fun SettingsPage(
                 value = preferences.bigAfter,
                 minValue = 1,
                 maxValue = 20,
+                defaultValue = defaultPreferences.bigAfter,
                 onValueChange = { onPreferencesChange(preferences.copy(bigAfter = it)) },
             )
             NumberInputField(
@@ -920,38 +978,46 @@ private fun SettingsPage(
                 value = preferences.bigFor,
                 minValue = 10,
                 maxValue = 3600,
+                defaultValue = defaultPreferences.bigFor,
                 onValueChange = { onPreferencesChange(preferences.copy(bigFor = it)) },
             )
         }
 
         Text(stringResource(R.string.settings_reminder), style = MaterialTheme.typography.titleLarge)
-        NumberInputField(
-            label = stringResource(R.string.settings_flash_for),
-            value = preferences.flashFor,
-            minValue = 3,
-            maxValue = 600,
-            onValueChange = { onPreferencesChange(preferences.copy(flashFor = it)) },
-        )
-        NumberInputField(
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.settings_top_flash_enabled), modifier = Modifier.weight(1f))
+            Switch(
+                checked = preferences.topFlashEnabled,
+                onCheckedChange = { enabled -> onPreferencesChange(preferences.copy(topFlashEnabled = enabled)) },
+            )
+        }
+        if (preferences.topFlashEnabled) {
+            NumberInputField(
+                label = stringResource(R.string.settings_top_flash_lead_seconds),
+                value = preferences.flashFor,
+                minValue = 1,
+                maxValue = 600,
+                defaultValue = defaultPreferences.flashFor,
+                onValueChange = { onPreferencesChange(preferences.copy(flashFor = it)) },
+            )
+            RequiredTextInputField(
+                label = stringResource(R.string.settings_top_flash_small_message),
+                value = preferences.topFlashSmallText,
+                defaultValue = defaultPreferences.topFlashSmallText,
+                onValueChange = { onPreferencesChange(preferences.copy(topFlashSmallText = it)) },
+            )
+            RequiredTextInputField(
+                label = stringResource(R.string.settings_top_flash_big_message),
+                value = preferences.topFlashBigText,
+                defaultValue = defaultPreferences.topFlashBigText,
+                onValueChange = { onPreferencesChange(preferences.copy(topFlashBigText = it)) },
+            )
+        }
+        PostponeDurationsInputField(
             label = stringResource(R.string.settings_postpone_for),
-            value = preferences.postponeFor,
-            minValue = 10,
-            maxValue = 7200,
-            onValueChange = { onPreferencesChange(preferences.copy(postponeFor = it)) },
-        )
-        NumberInputField(
-            label = stringResource(R.string.settings_reset_interval_after_pause),
-            value = preferences.resetIntervalAfterPause,
-            minValue = 60,
-            maxValue = 43200,
-            onValueChange = { onPreferencesChange(preferences.copy(resetIntervalAfterPause = it)) },
-        )
-        NumberInputField(
-            label = stringResource(R.string.settings_reset_cycle_after_pause),
-            value = preferences.resetCycleAfterPause,
-            minValue = 60,
-            maxValue = 86400,
-            onValueChange = { onPreferencesChange(preferences.copy(resetCycleAfterPause = it)) },
+            values = preferences.postponeFor,
+            defaultValues = defaultPreferences.postponeFor,
+            onValuesChange = { onPreferencesChange(preferences.copy(postponeFor = it)) },
         )
 
         Text(stringResource(R.string.settings_pause), style = MaterialTheme.typography.titleLarge)
@@ -1007,11 +1073,7 @@ private fun SettingsPage(
             Text(text = stringResource(R.string.settings_overlay_preview))
         }
 
-        Text(stringResource(R.string.settings_general), style = MaterialTheme.typography.titleLarge)
-        ThemeModeDropdownRow(
-            selectedMode = themeMode,
-            onThemeModeChange = onThemeModeChange,
-        )
+        Text(stringResource(R.string.settings_notification), style = MaterialTheme.typography.titleLarge)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.settings_persistent_notification), modifier = Modifier.weight(1f))
             Switch(
@@ -1019,6 +1081,69 @@ private fun SettingsPage(
                 onCheckedChange = onPersistentNotificationEnabledChange,
             )
         }
+        NumberInputField(
+            label = stringResource(R.string.settings_persistent_notification_update_frequency),
+            value = persistentNotificationUpdateFrequencySeconds,
+            minValue = 1,
+            maxValue = 600,
+            defaultValue = 10,
+            onValueChange = onPersistentNotificationUpdateFrequencySecondsChange,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.settings_pre_break_notification), modifier = Modifier.weight(1f))
+            Switch(
+                checked = preferences.preBreakNotificationEnabled,
+                onCheckedChange = { enabled ->
+                    onPreferencesChange(preferences.copy(preBreakNotificationEnabled = enabled))
+                },
+            )
+        }
+        if (preferences.preBreakNotificationEnabled) {
+            NumberInputField(
+                label = stringResource(R.string.settings_pre_break_notification_lead_seconds),
+                value = preferences.preBreakNotificationLeadSeconds,
+                minValue = 1,
+                maxValue = 3600,
+                defaultValue = defaultPreferences.preBreakNotificationLeadSeconds,
+                onValueChange = { onPreferencesChange(preferences.copy(preBreakNotificationLeadSeconds = it)) },
+            )
+            RequiredTextInputField(
+                label = stringResource(R.string.settings_pre_break_notification_small_title),
+                value = preferences.preBreakNotificationSmallTitle,
+                defaultValue = defaultPreferences.preBreakNotificationSmallTitle,
+                onValueChange = { onPreferencesChange(preferences.copy(preBreakNotificationSmallTitle = it)) },
+            )
+            RequiredTextInputField(
+                label = stringResource(R.string.settings_pre_break_notification_small_content),
+                value = preferences.preBreakNotificationSmallContent,
+                defaultValue = defaultPreferences.preBreakNotificationSmallContent,
+                onValueChange = { onPreferencesChange(preferences.copy(preBreakNotificationSmallContent = it)) },
+            )
+            RequiredTextInputField(
+                label = stringResource(R.string.settings_pre_break_notification_big_title),
+                value = preferences.preBreakNotificationBigTitle,
+                defaultValue = defaultPreferences.preBreakNotificationBigTitle,
+                onValueChange = { onPreferencesChange(preferences.copy(preBreakNotificationBigTitle = it)) },
+            )
+            RequiredTextInputField(
+                label = stringResource(R.string.settings_pre_break_notification_big_content),
+                value = preferences.preBreakNotificationBigContent,
+                defaultValue = defaultPreferences.preBreakNotificationBigContent,
+                onValueChange = { onPreferencesChange(preferences.copy(preBreakNotificationBigContent = it)) },
+            )
+            Button(
+                onClick = onOpenPreBreakNotificationChannelSettings,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.settings_open_pre_break_notification_channel))
+            }
+        }
+
+        Text(stringResource(R.string.settings_general), style = MaterialTheme.typography.titleLarge)
+        ThemeModeDropdownRow(
+            selectedMode = themeMode,
+            onThemeModeChange = onThemeModeChange,
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.settings_auto_start_on_boot), modifier = Modifier.weight(1f))
             Switch(checked = autoStartOnBoot, onCheckedChange = onAutoStartOnBootChange)
@@ -1184,14 +1309,97 @@ private fun AppSelectionSection(
 }
 
 @Composable
+private fun PostponeDurationsInputField(
+    label: String,
+    values: List<Int>,
+    defaultValues: List<Int>,
+    required: Boolean = true,
+    onValuesChange: (List<Int>) -> Unit,
+) {
+    var text by remember(values) { mutableStateOf(formatPostponeDurations(values)) }
+    var wasFocused by remember { mutableStateOf(false) }
+
+    TextField(
+        value = text,
+        onValueChange = { input ->
+            text = input
+        },
+        label = { Text(label) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+        modifier = Modifier
+            .fillMaxWidth()
+            .onFocusChanged { focusState ->
+                if (wasFocused && !focusState.isFocused) {
+                    val normalizedInput = normalizePostponeDurationInput(text)
+                    val normalizedValues = if (required && normalizedInput.isBlank()) {
+                        parsePostponeDurations(rawInput = null, fallback = defaultValues)
+                    } else {
+                        parsePostponeDurations(normalizedInput, fallback = defaultValues)
+                    }
+                    val normalizedText = formatPostponeDurations(normalizedValues)
+                    text = normalizedText
+                    onValuesChange(normalizedValues)
+                }
+                wasFocused = focusState.isFocused
+            },
+    )
+}
+
+@Composable
+private fun RequiredTextInputField(
+    label: String,
+    value: String,
+    defaultValue: String,
+    required: Boolean = true,
+    onValueChange: (String) -> Unit,
+) {
+    var text by remember(value) { mutableStateOf(value) }
+    var wasFocused by remember { mutableStateOf(false) }
+
+    TextField(
+        value = text,
+        onValueChange = { input ->
+            text = input
+            onValueChange(input)
+        },
+        label = { Text(label) },
+        supportingText = {
+            Text(" ")
+        },
+        singleLine = true,
+        modifier = Modifier
+            .fillMaxWidth()
+            .onFocusChanged { focusState ->
+                if (wasFocused && !focusState.isFocused && required) {
+                    val normalized = text.trim()
+                    if (normalized.isBlank()) {
+                        text = defaultValue
+                        onValueChange(defaultValue)
+                    } else if (normalized != text) {
+                        text = normalized
+                        onValueChange(normalized)
+                    }
+                }
+                wasFocused = focusState.isFocused
+            },
+    )
+}
+
+@Composable
 private fun NumberInputField(
     label: String,
     value: Int,
     minValue: Int,
     maxValue: Int,
+    defaultValue: Int,
+    required: Boolean = true,
     onValueChange: (Int) -> Unit,
 ) {
     var text by remember(value) { mutableStateOf(value.toString()) }
+    var wasFocused by remember { mutableStateOf(false) }
+    val parsedValue = text.toIntOrNull()
+    val showRangeWarning = text.isNotEmpty() && (parsedValue == null || parsedValue !in minValue..maxValue)
 
     TextField(
         value = text,
@@ -1199,14 +1407,36 @@ private fun NumberInputField(
             val digits = input.filter { it.isDigit() }
             text = digits
             val parsed = digits.toIntOrNull() ?: return@TextField
-            val clamped = parsed.coerceIn(minValue, maxValue)
-            onValueChange(clamped)
+            if (parsed in minValue..maxValue) {
+                onValueChange(parsed)
+            }
         },
         label = { Text(label) },
-        supportingText = { Text(stringResource(R.string.settings_value_range, minValue, maxValue)) },
+        isError = showRangeWarning,
+        supportingText = {
+            if (showRangeWarning) {
+                Text(
+                    text = stringResource(R.string.settings_value_range, minValue, maxValue),
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .onFocusChanged { focusState ->
+                if (wasFocused && !focusState.isFocused && required) {
+                    val parsed = text.toIntOrNull()
+                    val isValid = parsed != null && parsed in minValue..maxValue
+                    if (!isValid) {
+                        val safeDefaultValue = defaultValue.coerceIn(minValue, maxValue)
+                        text = safeDefaultValue.toString()
+                        onValueChange(safeDefaultValue)
+                    }
+                }
+                wasFocused = focusState.isFocused
+            },
     )
 }
 
@@ -1229,23 +1459,59 @@ private fun ActionButton(
     }
 }
 
-@Composable
-private fun modeLabel(mode: SessionMode): String {
-    return when (mode) {
-        SessionMode.NORMAL -> stringResource(R.string.mode_normal)
-        SessionMode.PAUSED -> stringResource(R.string.mode_paused)
-        SessionMode.BREAK -> stringResource(R.string.mode_break)
-    }
+private data class HomeNextBreak(
+    val isBigBreak: Boolean,
+    val secondsUntil: Int,
+)
+
+private fun buildHomeNextBreaks(state: BreakState, preferences: BreakPreferences): List<HomeNextBreak> {
+    val nextSmall = secondsUntilBreakType(
+        state = state,
+        preferences = preferences,
+        targetBigBreak = false,
+    )
+    val nextBig = secondsUntilBreakType(
+        state = state,
+        preferences = preferences,
+        targetBigBreak = true,
+    )
+
+    return listOfNotNull(
+        nextSmall?.let { HomeNextBreak(isBigBreak = false, secondsUntil = it) },
+        nextBig?.let { HomeNextBreak(isBigBreak = true, secondsUntil = it) },
+    ).sortedBy { it.secondsUntil }
 }
 
-@Composable
-private fun phaseLabel(phase: BreakPhase?): String {
-    return when (phase) {
-        BreakPhase.PROMPT -> stringResource(R.string.phase_prompt)
-        BreakPhase.FULL_SCREEN -> stringResource(R.string.phase_full_screen)
-        BreakPhase.POST -> stringResource(R.string.phase_post)
-        null -> stringResource(R.string.break_not_started)
+private fun secondsUntilBreakType(
+    state: BreakState,
+    preferences: BreakPreferences,
+    targetBigBreak: Boolean,
+): Int? {
+    if (targetBigBreak && preferences.bigAfter <= 0) {
+        return null
     }
+
+    val intervalSeconds = preferences.smallEvery.coerceAtLeast(1)
+    val baseCycle = if (state.mode == SessionMode.BREAK) {
+        state.breakCycleCount
+    } else {
+        state.breakCycleCount + 1
+    }
+    val baseSeconds = if (state.mode == SessionMode.BREAK) {
+        0
+    } else {
+        state.secondsToNextBreak.coerceAtLeast(0)
+    }
+
+    val searchLimit = baseCycle + preferences.bigAfter.coerceAtLeast(1) * 4 + 32
+    for (cycle in baseCycle..searchLimit) {
+        val isBigCycle = preferences.bigAfter > 0 && cycle % preferences.bigAfter == 0
+        if (isBigCycle == targetBigBreak) {
+            return baseSeconds + (cycle - baseCycle) * intervalSeconds
+        }
+    }
+
+    return null
 }
 
 private fun parsePackageList(csv: String): Set<String> {
@@ -1256,11 +1522,11 @@ private fun parsePackageList(csv: String): Set<String> {
         .toSet()
 }
 
-private fun formatSeconds(rawSeconds: Int): String {
+private fun formatMinutesSecondsNoLeadingZero(rawSeconds: Int): String {
     val seconds = rawSeconds.coerceAtLeast(0)
     val minutePart = seconds / 60
     val secondPart = seconds % 60
-    return "%02d:%02d".format(minutePart, secondPart)
+    return "$minutePart:${secondPart.toString().padStart(2, '0')}"
 }
 
 @Preview(showBackground = true)

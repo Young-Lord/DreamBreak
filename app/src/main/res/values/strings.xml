@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">Dream Break</string>
     <string name="notification_channel_name">Break reminders</string>
+    <string name="notification_channel_pre_break_name">Break soon alerts</string>
     <string name="notification_title">Eye break reminder active</string>
     <string name="notification_title_breaking">On break now</string>
     <string name="notification_title_countdown">Next break in %1$s</string>
@@ -17,6 +18,8 @@
     <string name="home_countdown">Next break countdown %1$s</string>
     <string name="home_since_last">Since last break %1$s</string>
     <string name="home_status">Current mode %1$s</string>
+    <string name="home_next_small_break">Next small break %1$s</string>
+    <string name="home_next_big_break">Next big break %1$s</string>
     <string name="home_app_enabled">Enable DreamBreak</string>
     <string name="home_app_status_on">Running</string>
     <string name="home_app_status_off">Stopped</string>
@@ -45,6 +48,7 @@
     <string name="settings_reminder">Reminder</string>
     <string name="settings_pause">Pause</string>
     <string name="settings_overlay">Overlay</string>
+    <string name="settings_notification">Notification</string>
     <string name="settings_general">General</string>
     <string name="settings_theme_mode">Theme</string>
     <string name="settings_theme_mode_follow_system">Follow system</string>
@@ -57,9 +61,11 @@
     <string name="settings_enable_big_break">Enable big break</string>
     <string name="settings_big_break_disabled_hint">Big break is disabled.</string>
     <string name="settings_flash_for">Top flash duration (sec)</string>
-    <string name="settings_postpone_for">Postpone duration (sec)</string>
-    <string name="settings_reset_interval_after_pause">Reset interval after pause (sec)</string>
-    <string name="settings_reset_cycle_after_pause">Reset cycle after pause (sec)</string>
+    <string name="settings_top_flash_enabled">Top flash reminder</string>
+    <string name="settings_top_flash_lead_seconds">Top flash lead time (sec)</string>
+    <string name="settings_top_flash_small_message">Top flash text (small break)</string>
+    <string name="settings_top_flash_big_message">Top flash text (big break)</string>
+    <string name="settings_postpone_for">Postpone durations (sec, comma-separated)</string>
     <string name="settings_pause_selected_apps">Pause timer in selected apps</string>
     <string name="settings_show_submenu">Show sub menu</string>
     <string name="settings_open_app_subpage">Open app subpage</string>
@@ -75,6 +81,14 @@
     <string name="settings_overlay_preview">Overlay preview</string>
     <string name="settings_auto_start_on_boot">Auto start on boot</string>
     <string name="settings_persistent_notification">Persistent notification</string>
+    <string name="settings_persistent_notification_update_frequency">Persistent notification update interval (sec)</string>
+    <string name="settings_pre_break_notification">Pre-break Android notification</string>
+    <string name="settings_pre_break_notification_lead_seconds">Pre-break notification lead time (sec)</string>
+    <string name="settings_pre_break_notification_small_title">Pre-break title (small break)</string>
+    <string name="settings_pre_break_notification_small_content">Pre-break content (small break)</string>
+    <string name="settings_pre_break_notification_big_title">Pre-break title (big break)</string>
+    <string name="settings_pre_break_notification_big_content">Pre-break content (big break)</string>
+    <string name="settings_open_pre_break_notification_channel">Open pre-break notification channel settings</string>
     <string name="action_back">Back</string>
     <string name="settings_lang_hint">Chinese is implemented now; English can be expanded later.</string>
     <string name="settings_no_usage_access">Usage access disabled, app-based pause cannot auto-detect.</string>

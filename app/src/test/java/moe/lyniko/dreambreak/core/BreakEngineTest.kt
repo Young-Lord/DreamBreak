@@ -11,9 +11,7 @@ class BreakEngineTest {
         bigAfter = 2,
         bigFor = 6,
         flashFor = 2,
-        postponeFor = 4,
-        resetIntervalAfterPause = 3,
-        resetCycleAfterPause = 5,
+        postponeFor = listOf(4),
     )
 
     @Test
@@ -155,16 +153,17 @@ class BreakEngineTest {
     }
 
     @Test
-    fun `resuming from long pause resets interval`() {
+    fun `resuming from pause keeps current countdown`() {
         var state = BreakState.initial(preferences)
+        state = BreakEngine.tick(state, preferences)
         state = BreakEngine.setPauseReason(state, PauseReason.APP_OPEN, active = true, preferences = preferences)
 
-        repeat(3) {
+        repeat(6) {
             state = BreakEngine.tick(state, preferences)
         }
 
         state = BreakEngine.setPauseReason(state, PauseReason.APP_OPEN, active = false, preferences = preferences)
         assertEquals(SessionMode.NORMAL, state.mode)
-        assertEquals(preferences.smallEvery, state.secondsToNextBreak)
+        assertEquals(4, state.secondsToNextBreak)
     }
 }
