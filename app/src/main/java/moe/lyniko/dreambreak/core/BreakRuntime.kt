@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import moe.lyniko.dreambreak.data.AppThemeMode
 
 data class BreakUiState(
     val preferences: BreakPreferences = BreakPreferences(),
@@ -23,6 +24,7 @@ data class BreakUiState(
     val onboardingCompleted: Boolean = false,
     val excludeFromRecents: Boolean = false,
     val persistentNotificationEnabled: Boolean = false,
+    val themeMode: AppThemeMode = AppThemeMode.FOLLOW_SYSTEM,
 )
 
 object BreakRuntime {
@@ -113,7 +115,7 @@ object BreakRuntime {
 
     fun setOverlayTransparencyPercent(value: Int) {
         val current = _uiState.value
-        _uiState.value = current.copy(overlayTransparencyPercent = value.coerceIn(0, 90))
+        _uiState.value = current.copy(overlayTransparencyPercent = value.coerceIn(0, 100))
     }
 
     fun setOverlayBackgroundUri(value: String) {
@@ -139,6 +141,11 @@ object BreakRuntime {
     fun setPersistentNotificationEnabled(enabled: Boolean) {
         val current = _uiState.value
         _uiState.value = current.copy(persistentNotificationEnabled = enabled)
+    }
+
+    fun setThemeMode(mode: AppThemeMode) {
+        val current = _uiState.value
+        _uiState.value = current.copy(themeMode = mode)
     }
 
     fun requestBreakNow(bigBreak: Boolean = false) {
@@ -227,6 +234,7 @@ object BreakRuntime {
         onboardingCompleted: Boolean,
         excludeFromRecents: Boolean,
         persistentNotificationEnabled: Boolean,
+        themeMode: AppThemeMode,
     ) {
         val current = _uiState.value
         _uiState.value = current.copy(
@@ -235,11 +243,12 @@ object BreakRuntime {
             monitoredApps = monitoredApps,
             autoStartOnBoot = autoStartOnBoot,
             appEnabled = appEnabled,
-            overlayTransparencyPercent = overlayTransparencyPercent.coerceIn(0, 90),
+            overlayTransparencyPercent = overlayTransparencyPercent.coerceIn(0, 100),
             overlayBackgroundUri = overlayBackgroundUri,
             onboardingCompleted = onboardingCompleted,
             excludeFromRecents = excludeFromRecents,
             persistentNotificationEnabled = persistentNotificationEnabled,
+            themeMode = themeMode,
             state = current.state.copy(
                 secondsToNextBreak = current.state.secondsToNextBreak.coerceAtMost(preferences.smallEvery)
             )

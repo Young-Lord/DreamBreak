@@ -46,6 +46,10 @@
     <string name="settings_pause">Pause</string>
     <string name="settings_overlay">Overlay</string>
     <string name="settings_general">General</string>
+    <string name="settings_theme_mode">Theme</string>
+    <string name="settings_theme_mode_follow_system">Follow system</string>
+    <string name="settings_theme_mode_light">Light</string>
+    <string name="settings_theme_mode_dark">Dark</string>
     <string name="settings_small_every">Small break interval (min)</string>
     <string name="settings_small_for">Small break duration (sec)</string>
     <string name="settings_big_after">Small breaks before big break</string>

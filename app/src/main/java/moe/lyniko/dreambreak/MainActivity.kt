@@ -27,6 +27,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,6 +48,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
@@ -54,10 +56,16 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -86,6 +94,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import moe.lyniko.dreambreak.core.BreakPhase
@@ -94,6 +103,7 @@ import moe.lyniko.dreambreak.core.BreakRuntime
 import moe.lyniko.dreambreak.core.BreakState
 import moe.lyniko.dreambreak.core.SessionMode
 import moe.lyniko.dreambreak.data.AppSettings
+import moe.lyniko.dreambreak.data.AppThemeMode
 import moe.lyniko.dreambreak.data.SettingsStore
 import moe.lyniko.dreambreak.monitor.ForegroundAppMonitor
 import moe.lyniko.dreambreak.monitor.InstalledApp
@@ -108,7 +118,13 @@ class MainActivity : ComponentActivity() {
         BreakRuntime.start()
         enableEdgeToEdge()
         setContent {
-            DreamBreakTheme {
+            val uiState by BreakRuntime.uiState.collectAsState()
+            val darkTheme = when (uiState.themeMode) {
+                AppThemeMode.FOLLOW_SYSTEM -> isSystemInDarkTheme()
+                AppThemeMode.LIGHT -> false
+                AppThemeMode.DARK -> true
+            }
+            DreamBreakTheme(darkTheme = darkTheme) {
                 DreamBreakApp()
             }
         }
@@ -207,6 +223,7 @@ fun DreamBreakApp() {
                 onboardingCompleted = settings.onboardingCompleted,
                 excludeFromRecents = settings.excludeFromRecents,
                 persistentNotificationEnabled = settings.persistentNotificationEnabled,
+                themeMode = settings.themeMode,
             )
             settingsLoaded = true
         }
@@ -223,6 +240,7 @@ fun DreamBreakApp() {
         uiState.onboardingCompleted,
         uiState.excludeFromRecents,
         uiState.persistentNotificationEnabled,
+        uiState.themeMode,
         settingsLoaded,
     ) {
         if (!settingsLoaded) {
@@ -241,6 +259,7 @@ fun DreamBreakApp() {
                 onboardingCompleted = uiState.onboardingCompleted,
                 excludeFromRecents = uiState.excludeFromRecents,
                 persistentNotificationEnabled = uiState.persistentNotificationEnabled,
+                themeMode = uiState.themeMode,
             )
         )
     }
@@ -345,6 +364,7 @@ fun DreamBreakApp() {
                             overlayBackgroundUri = uiState.overlayBackgroundUri,
                             excludeFromRecents = uiState.excludeFromRecents,
                             persistentNotificationEnabled = uiState.persistentNotificationEnabled,
+                            themeMode = uiState.themeMode,
                             onPreferencesChange = { BreakRuntime.updatePreferences(it) },
                             onPauseInListedAppsChange = { BreakRuntime.setPauseInListedApps(it) },
                             onMonitoredAppsChange = { BreakRuntime.setMonitoredApps(it) },
@@ -353,6 +373,7 @@ fun DreamBreakApp() {
                             onPickOverlayImage = { overlayPicker.launch(arrayOf("image/*")) },
                             onClearOverlayImage = { BreakRuntime.setOverlayBackgroundUri("") },
                             onExcludeFromRecentsChange = { BreakRuntime.setExcludeFromRecents(it) },
+                            onThemeModeChange = { BreakRuntime.setThemeMode(it) },
                             onPersistentNotificationEnabledChange = { enabled ->
                                 if (!enabled) {
                                     BreakRuntime.setPersistentNotificationEnabled(false)
@@ -747,6 +768,7 @@ private fun SettingsPage(
     overlayBackgroundUri: String,
     excludeFromRecents: Boolean,
     persistentNotificationEnabled: Boolean,
+    themeMode: AppThemeMode,
     onPreferencesChange: (BreakPreferences) -> Unit,
     onPauseInListedAppsChange: (Boolean) -> Unit,
     onMonitoredAppsChange: (String) -> Unit,
@@ -755,6 +777,7 @@ private fun SettingsPage(
     onPickOverlayImage: () -> Unit,
     onClearOverlayImage: () -> Unit,
     onExcludeFromRecentsChange: (Boolean) -> Unit,
+    onThemeModeChange: (AppThemeMode) -> Unit,
     onPersistentNotificationEnabledChange: (Boolean) -> Unit,
 ) {
     val context = LocalContext.current
@@ -952,20 +975,22 @@ private fun SettingsPage(
         )
 
         Text(stringResource(R.string.settings_overlay), style = MaterialTheme.typography.titleLarge)
-        NumberInputField(
+        PercentageSliderField(
             label = stringResource(R.string.settings_overlay_transparency),
             value = overlayTransparencyPercent,
-            minValue = 0,
-            maxValue = 90,
             onValueChange = onOverlayTransparencyPercentChange,
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Button(onClick = onPickOverlayImage) {
-                Text(stringResource(R.string.settings_pick_overlay_image))
-            }
-            Button(onClick = onClearOverlayImage) {
-                Text(stringResource(R.string.settings_clear_overlay_image))
-            }
+        Button(
+            onClick = onPickOverlayImage,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.settings_pick_overlay_image))
+        }
+        Button(
+            onClick = onClearOverlayImage,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.settings_clear_overlay_image))
         }
         Text(
             text = if (overlayBackgroundUri.isBlank()) {
@@ -979,16 +1004,14 @@ private fun SettingsPage(
             onClick = { overlayPreviewVisible = !overlayPreviewVisible },
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(
-                text = if (overlayPreviewVisible) {
-                    stringResource(R.string.action_cancel)
-                } else {
-                    stringResource(R.string.settings_overlay_preview)
-                }
-            )
+            Text(text = stringResource(R.string.settings_overlay_preview))
         }
 
         Text(stringResource(R.string.settings_general), style = MaterialTheme.typography.titleLarge)
+        ThemeModeDropdownRow(
+            selectedMode = themeMode,
+            onThemeModeChange = onThemeModeChange,
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.settings_persistent_notification), modifier = Modifier.weight(1f))
             Switch(
@@ -1005,6 +1028,115 @@ private fun SettingsPage(
             Switch(checked = excludeFromRecents, onCheckedChange = onExcludeFromRecentsChange)
         }
         Text(stringResource(R.string.settings_lang_hint))
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ThemeModeDropdownRow(
+    selectedMode: AppThemeMode,
+    onThemeModeChange: (AppThemeMode) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val options = listOf(
+        AppThemeMode.FOLLOW_SYSTEM to stringResource(R.string.settings_theme_mode_follow_system),
+        AppThemeMode.LIGHT to stringResource(R.string.settings_theme_mode_light),
+        AppThemeMode.DARK to stringResource(R.string.settings_theme_mode_dark),
+    )
+    val selectedLabel = options.firstOrNull { it.first == selectedMode }?.second
+        ?: stringResource(R.string.settings_theme_mode_follow_system)
+
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            stringResource(R.string.settings_theme_mode),
+            modifier = Modifier.weight(1f),
+        )
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded },
+            modifier = Modifier.width(180.dp),
+        ) {
+            TextField(
+                value = selectedLabel,
+                onValueChange = {},
+                readOnly = true,
+                singleLine = true,
+                trailingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = null,
+                    )
+                },
+                modifier = Modifier.menuAnchor(),
+            )
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+            ) {
+                options.forEach { (mode, label) ->
+                    DropdownMenuItem(
+                        text = { Text(text = label) },
+                        onClick = {
+                            onThemeModeChange(mode)
+                            expanded = false
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PercentageSliderField(
+    label: String,
+    value: Int,
+    onValueChange: (Int) -> Unit,
+) {
+    val safeValue = value.coerceIn(0, 100)
+
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = "$safeValue%",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        Slider(
+            value = safeValue.toFloat(),
+            onValueChange = { sliderValue ->
+                onValueChange(sliderValue.roundToInt().coerceIn(0, 100))
+            },
+            valueRange = 0f..100f,
+            steps = 99,
+            colors = SliderDefaults.colors(
+                activeTickColor = Color.Transparent,
+                inactiveTickColor = Color.Transparent,
+            ),
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(text = "0%", style = MaterialTheme.typography.labelSmall)
+            Text(text = "100%", style = MaterialTheme.typography.labelSmall)
+        }
     }
 }
 

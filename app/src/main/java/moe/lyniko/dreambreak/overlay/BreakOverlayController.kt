@@ -105,10 +105,12 @@ class BreakOverlayController(
             overlayWindowType(),
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT,
         ).apply {
             gravity = Gravity.TOP
+            applyEdgeToEdge(this)
         }
 
         windowManager.addView(view, params)
@@ -255,9 +257,13 @@ class BreakOverlayController(
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.MATCH_PARENT,
                 overlayWindowType(),
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                 PixelFormat.TRANSLUCENT,
-            )
+            ).apply {
+                gravity = Gravity.TOP or Gravity.START
+                applyEdgeToEdge(this)
+            }
 
             windowManager.addView(root, params)
             fullScreenView = root
@@ -305,8 +311,8 @@ class BreakOverlayController(
             }
         }
 
-        val dimAlpha = ((100 - overlayTransparencyPercent.coerceIn(0, 90)) / 100f)
-            .coerceIn(0.10f, 1f)
+        val dimAlpha = ((100 - overlayTransparencyPercent.coerceIn(0, 100)) / 100f)
+            .coerceIn(0f, 1f)
         dimLayer.setBackgroundColor(Color.BLACK)
         dimLayer.alpha = dimAlpha
     }
@@ -428,6 +434,17 @@ class BreakOverlayController(
     private fun dp(value: Int): Int {
         val density = context.resources.displayMetrics.density
         return (value * density).toInt()
+    }
+
+    private fun applyEdgeToEdge(params: WindowManager.LayoutParams) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            params.setFitInsetsTypes(0)
+            params.setFitInsetsSides(0)
+            params.isFitInsetsIgnoringVisibility = true
+        }
     }
 
     private fun formatSeconds(rawSeconds: Int): String {

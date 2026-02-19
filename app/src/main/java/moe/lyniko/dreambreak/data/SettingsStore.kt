@@ -23,6 +23,7 @@ data class AppSettings(
     val onboardingCompleted: Boolean = false,
     val excludeFromRecents: Boolean = false,
     val persistentNotificationEnabled: Boolean = false,
+    val themeMode: AppThemeMode = AppThemeMode.FOLLOW_SYSTEM,
 )
 
 class SettingsStore(private val context: Context) {
@@ -43,11 +44,12 @@ class SettingsStore(private val context: Context) {
             monitoredApps = prefs[Keys.MONITORED_APPS] ?: "",
             autoStartOnBoot = prefs[Keys.AUTO_START_ON_BOOT] ?: false,
             appEnabled = prefs[Keys.APP_ENABLED] ?: true,
-            overlayTransparencyPercent = (prefs[Keys.OVERLAY_TRANSPARENCY_PERCENT] ?: 28).coerceIn(0, 90),
+            overlayTransparencyPercent = (prefs[Keys.OVERLAY_TRANSPARENCY_PERCENT] ?: 28).coerceIn(0, 100),
             overlayBackgroundUri = prefs[Keys.OVERLAY_BACKGROUND_URI] ?: "",
             onboardingCompleted = prefs[Keys.ONBOARDING_COMPLETED] ?: false,
             excludeFromRecents = prefs[Keys.EXCLUDE_FROM_RECENTS] ?: false,
             persistentNotificationEnabled = prefs[Keys.PERSISTENT_NOTIFICATION_ENABLED] ?: false,
+            themeMode = AppThemeMode.fromStorage(prefs[Keys.THEME_MODE]),
         )
     }
 
@@ -65,11 +67,12 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.MONITORED_APPS] = settings.monitoredApps
             prefs[Keys.AUTO_START_ON_BOOT] = settings.autoStartOnBoot
             prefs[Keys.APP_ENABLED] = settings.appEnabled
-            prefs[Keys.OVERLAY_TRANSPARENCY_PERCENT] = settings.overlayTransparencyPercent.coerceIn(0, 90)
+            prefs[Keys.OVERLAY_TRANSPARENCY_PERCENT] = settings.overlayTransparencyPercent.coerceIn(0, 100)
             prefs[Keys.OVERLAY_BACKGROUND_URI] = settings.overlayBackgroundUri
             prefs[Keys.ONBOARDING_COMPLETED] = settings.onboardingCompleted
             prefs[Keys.EXCLUDE_FROM_RECENTS] = settings.excludeFromRecents
             prefs[Keys.PERSISTENT_NOTIFICATION_ENABLED] = settings.persistentNotificationEnabled
+            prefs[Keys.THEME_MODE] = settings.themeMode.storageValue
         }
     }
 
@@ -91,5 +94,6 @@ class SettingsStore(private val context: Context) {
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
         val EXCLUDE_FROM_RECENTS = booleanPreferencesKey("exclude_from_recents")
         val PERSISTENT_NOTIFICATION_ENABLED = booleanPreferencesKey("persistent_notification_enabled")
+        val THEME_MODE = intPreferencesKey("theme_mode")
     }
 }
