@@ -34,6 +34,11 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".notification.PostponePickerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DreamBreak" />
+
         <service
             android:name=".notification.BreakReminderService"
             android:enabled="true"

@@ -89,6 +89,44 @@ class BreakEngineTest {
     }
 
     @Test
+    fun `completed counters update after breaks`() {
+        var state = BreakEngine.requestBreakNow(BreakState.initial(preferences), preferences)
+        repeat(2) {
+            state = BreakEngine.tick(state, preferences)
+        }
+        repeat(3) {
+            state = BreakEngine.tick(state, preferences)
+        }
+
+        assertEquals(1, state.completedSmallBreaks)
+        assertEquals(0, state.completedBigBreaks)
+
+        state = BreakEngine.requestBreakNow(state, preferences, bigBreak = true)
+        repeat(2) {
+            state = BreakEngine.tick(state, preferences)
+        }
+        repeat(6) {
+            state = BreakEngine.tick(state, preferences)
+        }
+
+        assertEquals(1, state.completedSmallBreaks)
+        assertEquals(1, state.completedBigBreaks)
+    }
+
+    @Test
+    fun `big break can be disabled by zero bigAfter`() {
+        val disabledBigBreakPreferences = preferences.copy(bigAfter = 0)
+        var state = BreakState.initial(disabledBigBreakPreferences)
+
+        repeat(5) {
+            state = BreakEngine.tick(state, disabledBigBreakPreferences)
+        }
+
+        assertEquals(SessionMode.BREAK, state.mode)
+        assertTrue(!state.isBigBreak)
+    }
+
+    @Test
     fun `interrupt break returns to prompt stage`() {
         var state = BreakEngine.requestBreakNow(BreakState.initial(preferences), preferences)
         repeat(2) {

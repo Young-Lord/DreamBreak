@@ -22,6 +22,7 @@ data class BreakUiState(
     val overlayBackgroundUri: String = "",
     val onboardingCompleted: Boolean = false,
     val excludeFromRecents: Boolean = false,
+    val persistentNotificationEnabled: Boolean = false,
 )
 
 object BreakRuntime {
@@ -135,6 +136,11 @@ object BreakRuntime {
         _uiState.value = current.copy(excludeFromRecents = exclude)
     }
 
+    fun setPersistentNotificationEnabled(enabled: Boolean) {
+        val current = _uiState.value
+        _uiState.value = current.copy(persistentNotificationEnabled = enabled)
+    }
+
     fun requestBreakNow(bigBreak: Boolean = false) {
         val current = _uiState.value
         if (!current.appEnabled) {
@@ -220,6 +226,7 @@ object BreakRuntime {
         overlayBackgroundUri: String,
         onboardingCompleted: Boolean,
         excludeFromRecents: Boolean,
+        persistentNotificationEnabled: Boolean,
     ) {
         val current = _uiState.value
         _uiState.value = current.copy(
@@ -232,6 +239,7 @@ object BreakRuntime {
             overlayBackgroundUri = overlayBackgroundUri,
             onboardingCompleted = onboardingCompleted,
             excludeFromRecents = excludeFromRecents,
+            persistentNotificationEnabled = persistentNotificationEnabled,
             state = current.state.copy(
                 secondsToNextBreak = current.state.secondsToNextBreak.coerceAtMost(preferences.smallEvery)
             )

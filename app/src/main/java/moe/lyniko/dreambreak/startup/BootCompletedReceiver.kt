@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import moe.lyniko.dreambreak.MainActivity
 import moe.lyniko.dreambreak.data.SettingsStore
 import moe.lyniko.dreambreak.notification.BreakReminderService
 
@@ -22,7 +23,12 @@ class BootCompletedReceiver : BroadcastReceiver() {
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             runCatching {
                 val settings = SettingsStore(context.applicationContext).settingsFlow.first()
-                if (settings.autoStartOnBoot && settings.appEnabled) {
+                if (
+                    settings.autoStartOnBoot &&
+                    settings.appEnabled &&
+                    settings.persistentNotificationEnabled &&
+                    MainActivity.hasNotificationPermission(context.applicationContext)
+                ) {
                     BreakReminderService.start(context.applicationContext)
                 }
             }

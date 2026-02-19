@@ -1,8 +1,10 @@
 package moe.lyniko.dreambreak
 
+import android.Manifest
 import android.app.ActivityManager
+import android.content.Context
 import android.content.Intent
-import android.graphics.BitmapFactory
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -14,13 +16,17 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,7 +48,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
@@ -58,6 +63,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -71,19 +77,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import moe.lyniko.dreambreak.core.BreakPhase
 import moe.lyniko.dreambreak.core.BreakPreferences
 import moe.lyniko.dreambreak.core.BreakRuntime
@@ -95,13 +99,13 @@ import moe.lyniko.dreambreak.monitor.ForegroundAppMonitor
 import moe.lyniko.dreambreak.monitor.InstalledApp
 import moe.lyniko.dreambreak.monitor.InstalledAppsProvider
 import moe.lyniko.dreambreak.notification.BreakReminderService
+import moe.lyniko.dreambreak.overlay.BreakOverlayController
 import moe.lyniko.dreambreak.ui.theme.DreamBreakTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         BreakRuntime.start()
-        BreakReminderService.start(this)
         enableEdgeToEdge()
         setContent {
             DreamBreakTheme {
@@ -112,28 +116,53 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        applyExcludeFromRecents()
+        applyExcludeFromRecentsSetting(BreakRuntime.uiState.value.excludeFromRecents)
     }
 
-    private fun applyExcludeFromRecents() {
-        val exclude = BreakRuntime.uiState.value.excludeFromRecents
+    fun applyExcludeFromRecentsSetting(exclude: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             val am = getSystemService(ACTIVITY_SERVICE) as ActivityManager
-            val tasks = am.appTasks
-            if (tasks.isNotEmpty()) {
-                tasks[0].setExcludeFromRecents(exclude)
+            am.appTasks.forEach { appTask ->
+                appTask.setExcludeFromRecents(exclude)
             }
         }
     }
 
     companion object {
-        fun canDrawOverlays(context: android.content.Context): Boolean {
+        fun canDrawOverlays(context: Context): Boolean {
             return Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(context)
         }
 
-        fun isIgnoringBatteryOptimizations(context: android.content.Context): Boolean {
+        fun isIgnoringBatteryOptimizations(context: Context): Boolean {
             val powerManager = context.getSystemService(POWER_SERVICE) as PowerManager
             return powerManager.isIgnoringBatteryOptimizations(context.packageName)
+        }
+
+        fun hasNotificationPermission(context: Context): Boolean {
+            val runtimeGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+            } else {
+                true
+            }
+            return runtimeGranted && NotificationManagerCompat.from(context).areNotificationsEnabled()
+        }
+
+        fun openNotificationSettings(context: Context) {
+            val settingsIntent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                putExtra("app_package", context.packageName)
+                putExtra("app_uid", context.applicationInfo.uid)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            runCatching {
+                context.startActivity(settingsIntent)
+            }.onFailure {
+                val fallbackIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.fromParts("package", context.packageName, null)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                runCatching { context.startActivity(fallbackIntent) }
+            }
         }
     }
 }
@@ -177,6 +206,7 @@ fun DreamBreakApp() {
                 overlayBackgroundUri = settings.overlayBackgroundUri,
                 onboardingCompleted = settings.onboardingCompleted,
                 excludeFromRecents = settings.excludeFromRecents,
+                persistentNotificationEnabled = settings.persistentNotificationEnabled,
             )
             settingsLoaded = true
         }
@@ -192,6 +222,7 @@ fun DreamBreakApp() {
         uiState.overlayBackgroundUri,
         uiState.onboardingCompleted,
         uiState.excludeFromRecents,
+        uiState.persistentNotificationEnabled,
         settingsLoaded,
     ) {
         if (!settingsLoaded) {
@@ -209,8 +240,33 @@ fun DreamBreakApp() {
                 overlayBackgroundUri = uiState.overlayBackgroundUri,
                 onboardingCompleted = uiState.onboardingCompleted,
                 excludeFromRecents = uiState.excludeFromRecents,
+                persistentNotificationEnabled = uiState.persistentNotificationEnabled,
             )
         )
+    }
+
+    LaunchedEffect(settingsLoaded, uiState.persistentNotificationEnabled, uiState.appEnabled) {
+        if (!settingsLoaded) {
+            return@LaunchedEffect
+        }
+
+        if (uiState.persistentNotificationEnabled && uiState.appEnabled) {
+            if (MainActivity.hasNotificationPermission(context)) {
+                BreakReminderService.start(context)
+            } else {
+                BreakRuntime.setPersistentNotificationEnabled(false)
+                BreakReminderService.stop(context)
+            }
+        } else {
+            BreakReminderService.stop(context)
+        }
+    }
+
+    LaunchedEffect(settingsLoaded, uiState.excludeFromRecents) {
+        if (!settingsLoaded) {
+            return@LaunchedEffect
+        }
+        (context as? MainActivity)?.applyExcludeFromRecentsSetting(uiState.excludeFromRecents)
     }
 
     LaunchedEffect(uiState.pauseInListedApps, uiState.monitoredApps) {
@@ -259,42 +315,56 @@ fun DreamBreakApp() {
                     .safeDrawingPadding()
                     .padding(innerPadding)
             ) {
-                when (currentDestination) {
-                    AppDestinations.HOME -> HomePage(
-                        state = uiState.state,
-                        appEnabled = uiState.appEnabled,
-                        onAppEnabledChange = { BreakRuntime.setAppEnabled(it) },
-                        onBreakNow = { BreakRuntime.requestBreakNow() },
-                        onBigBreakNow = { BreakRuntime.requestBreakNow(bigBreak = true) },
-                        onPostpone = { BreakRuntime.postponeBreak() },
-                        onStartReminder = { BreakReminderService.start(context) },
-                    )
+                AnimatedContent(
+                    targetState = currentDestination,
+                    transitionSpec = {
+                        fadeIn(animationSpec = tween(durationMillis = 260, delayMillis = 80)) togetherWith
+                            fadeOut(animationSpec = tween(durationMillis = 120))
+                    },
+                    label = "destinationTransition",
+                ) { destination ->
+                    when (destination) {
+                        AppDestinations.HOME -> HomePage(
+                            state = uiState.state,
+                            preferences = uiState.preferences,
+                            appEnabled = uiState.appEnabled,
+                            onAppEnabledChange = { BreakRuntime.setAppEnabled(it) },
+                            onBreakNow = { BreakRuntime.requestBreakNow() },
+                            onBigBreakNow = { BreakRuntime.requestBreakNow(bigBreak = true) },
+                            onPostpone = { BreakRuntime.postponeBreak() },
+                        )
 
-                    AppDestinations.BREAK -> BreakPage(
-                        state = uiState.state,
-                        onInterruptBreak = { BreakRuntime.interruptBreak() },
-                        onPostponeBreak = { seconds -> BreakRuntime.postponeBreakForSeconds(seconds) },
-                    )
-
-                    AppDestinations.SETTINGS -> SettingsPage(
-                        preferences = uiState.preferences,
-                        pauseInListedApps = uiState.pauseInListedApps,
-                        monitoredApps = uiState.monitoredApps,
-                        hasUsageAccess = hasUsageAccess,
-                        installedApps = installedApps,
-                        autoStartOnBoot = uiState.autoStartOnBoot,
-                        overlayTransparencyPercent = uiState.overlayTransparencyPercent,
-                        overlayBackgroundUri = uiState.overlayBackgroundUri,
-                        excludeFromRecents = uiState.excludeFromRecents,
-                        onPreferencesChange = { BreakRuntime.updatePreferences(it) },
-                        onPauseInListedAppsChange = { BreakRuntime.setPauseInListedApps(it) },
-                        onMonitoredAppsChange = { BreakRuntime.setMonitoredApps(it) },
-                        onAutoStartOnBootChange = { BreakRuntime.setAutoStartOnBoot(it) },
-                        onOverlayTransparencyPercentChange = { BreakRuntime.setOverlayTransparencyPercent(it) },
-                        onPickOverlayImage = { overlayPicker.launch(arrayOf("image/*")) },
-                        onClearOverlayImage = { BreakRuntime.setOverlayBackgroundUri("") },
-                        onExcludeFromRecentsChange = { BreakRuntime.setExcludeFromRecents(it) },
-                    )
+                        AppDestinations.SETTINGS -> SettingsPage(
+                            preferences = uiState.preferences,
+                            pauseInListedApps = uiState.pauseInListedApps,
+                            monitoredApps = uiState.monitoredApps,
+                            hasUsageAccess = hasUsageAccess,
+                            installedApps = installedApps,
+                            autoStartOnBoot = uiState.autoStartOnBoot,
+                            overlayTransparencyPercent = uiState.overlayTransparencyPercent,
+                            overlayBackgroundUri = uiState.overlayBackgroundUri,
+                            excludeFromRecents = uiState.excludeFromRecents,
+                            persistentNotificationEnabled = uiState.persistentNotificationEnabled,
+                            onPreferencesChange = { BreakRuntime.updatePreferences(it) },
+                            onPauseInListedAppsChange = { BreakRuntime.setPauseInListedApps(it) },
+                            onMonitoredAppsChange = { BreakRuntime.setMonitoredApps(it) },
+                            onAutoStartOnBootChange = { BreakRuntime.setAutoStartOnBoot(it) },
+                            onOverlayTransparencyPercentChange = { BreakRuntime.setOverlayTransparencyPercent(it) },
+                            onPickOverlayImage = { overlayPicker.launch(arrayOf("image/*")) },
+                            onClearOverlayImage = { BreakRuntime.setOverlayBackgroundUri("") },
+                            onExcludeFromRecentsChange = { BreakRuntime.setExcludeFromRecents(it) },
+                            onPersistentNotificationEnabledChange = { enabled ->
+                                if (!enabled) {
+                                    BreakRuntime.setPersistentNotificationEnabled(false)
+                                } else if (MainActivity.hasNotificationPermission(context)) {
+                                    BreakRuntime.setPersistentNotificationEnabled(true)
+                                } else {
+                                    BreakRuntime.setPersistentNotificationEnabled(false)
+                                    MainActivity.openNotificationSettings(context)
+                                }
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -303,7 +373,6 @@ fun DreamBreakApp() {
 
 private enum class AppDestinations(val labelRes: Int, val icon: ImageVector) {
     HOME(R.string.nav_home, Icons.Default.Home),
-    BREAK(R.string.nav_break, Icons.Default.Favorite),
     SETTINGS(R.string.nav_settings, Icons.Default.Settings),
 }
 
@@ -591,13 +660,18 @@ private fun PromptBanner(show: Boolean) {
 @Composable
 private fun HomePage(
     state: BreakState,
+    preferences: BreakPreferences,
     appEnabled: Boolean,
     onAppEnabledChange: (Boolean) -> Unit,
     onBreakNow: () -> Unit,
     onBigBreakNow: () -> Unit,
     onPostpone: () -> Unit,
-    onStartReminder: () -> Unit,
 ) {
+    val homeToggleBackgroundColor by animateColorAsState(
+        targetValue = if (appEnabled) Color(0xFF0072B2) else Color(0xFFD55E00),
+        label = "homeToggleBackgroundColor",
+    )
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -611,20 +685,24 @@ private fun HomePage(
                 .height(78.dp),
             shape = RoundedCornerShape(20.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = if (appEnabled) Color(0xFF2F6C4A) else Color(0xFF6B3F3F),
+                containerColor = homeToggleBackgroundColor,
                 contentColor = Color.White,
             ),
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = stringResource(R.string.home_app_enabled),
+                    text = if (appEnabled) {
+                        stringResource(R.string.home_app_status_on)
+                    } else {
+                        stringResource(R.string.home_app_status_off)
+                    },
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Text(
                     text = if (appEnabled) {
-                        "${stringResource(R.string.home_app_status_on)} · ${stringResource(R.string.home_toggle_disable)}"
+                        stringResource(R.string.home_toggle_disable)
                     } else {
-                        "${stringResource(R.string.home_app_status_off)} · ${stringResource(R.string.home_toggle_enable)}"
+                        stringResource(R.string.home_toggle_enable)
                     },
                     style = MaterialTheme.typography.bodyMedium,
                 )
@@ -640,69 +718,20 @@ private fun HomePage(
             onClick = onBreakNow,
             enabled = appEnabled,
         )
-        ActionButton(
-            text = stringResource(R.string.action_big_break),
-            icon = Icons.Default.Favorite,
-            onClick = onBigBreakNow,
-            enabled = appEnabled,
-        )
+        if (preferences.bigAfter > 0) {
+            ActionButton(
+                text = stringResource(R.string.action_big_break),
+                icon = Icons.Default.Favorite,
+                onClick = onBigBreakNow,
+                enabled = appEnabled,
+            )
+        }
         ActionButton(
             text = stringResource(R.string.action_postpone_5m),
             icon = Icons.Default.Home,
             onClick = onPostpone,
             enabled = appEnabled,
         )
-        ActionButton(
-            text = stringResource(R.string.action_start_notification),
-            icon = Icons.Default.Notifications,
-            onClick = onStartReminder,
-        )
-    }
-}
-
-@Composable
-private fun BreakPage(
-    state: BreakState,
-    onInterruptBreak: () -> Unit,
-    onPostponeBreak: (Int) -> Unit,
-) {
-    var showPostponeOptions by remember { mutableStateOf(false) }
-    val breakType = if (state.isBigBreak) stringResource(R.string.break_type_big) else stringResource(R.string.break_type_small)
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Text(stringResource(R.string.break_current_type, breakType), style = MaterialTheme.typography.headlineSmall)
-        Text(stringResource(R.string.break_phase, phaseLabel(state.phase)))
-        Text(stringResource(R.string.break_remaining, formatSeconds(state.breakSecondsRemaining)))
-        Text(stringResource(R.string.break_exit_hint))
-        ActionButton(
-            text = stringResource(R.string.action_exit),
-            icon = Icons.Default.Close,
-            onClick = {
-                showPostponeOptions = false
-                onInterruptBreak()
-            },
-            enabled = state.phase == BreakPhase.FULL_SCREEN,
-        )
-        ActionButton(
-            text = stringResource(R.string.action_postpone),
-            icon = Icons.Default.Notifications,
-            onClick = { showPostponeOptions = !showPostponeOptions },
-            enabled = state.phase == BreakPhase.FULL_SCREEN,
-        )
-
-        AnimatedVisibility(showPostponeOptions) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { onPostponeBreak(60); showPostponeOptions = false }) { Text(stringResource(R.string.postpone_option_1m)) }
-                Button(onClick = { onPostponeBreak(5 * 60); showPostponeOptions = false }) { Text(stringResource(R.string.postpone_option_5m)) }
-                Button(onClick = { onPostponeBreak(15 * 60); showPostponeOptions = false }) { Text(stringResource(R.string.postpone_option_15m)) }
-                Button(onClick = { onPostponeBreak(30 * 60); showPostponeOptions = false }) { Text(stringResource(R.string.postpone_option_30m)) }
-            }
-        }
     }
 }
 
@@ -717,6 +746,7 @@ private fun SettingsPage(
     overlayTransparencyPercent: Int,
     overlayBackgroundUri: String,
     excludeFromRecents: Boolean,
+    persistentNotificationEnabled: Boolean,
     onPreferencesChange: (BreakPreferences) -> Unit,
     onPauseInListedAppsChange: (Boolean) -> Unit,
     onMonitoredAppsChange: (String) -> Unit,
@@ -725,9 +755,61 @@ private fun SettingsPage(
     onPickOverlayImage: () -> Unit,
     onClearOverlayImage: () -> Unit,
     onExcludeFromRecentsChange: (Boolean) -> Unit,
+    onPersistentNotificationEnabledChange: (Boolean) -> Unit,
 ) {
+    val context = LocalContext.current
     var appSearch by remember { mutableStateOf("") }
     var openSubPage by remember { mutableStateOf(false) }
+    var overlayPreviewVisible by remember { mutableStateOf(false) }
+    val previewController = remember(context.applicationContext) {
+        BreakOverlayController(
+            context = context.applicationContext,
+            onInterruptBreak = { overlayPreviewVisible = false },
+            onPostponeBreak = { _ -> overlayPreviewVisible = false },
+        )
+    }
+
+    DisposableEffect(previewController) {
+        onDispose {
+            previewController.release()
+        }
+    }
+
+    LaunchedEffect(openSubPage) {
+        if (openSubPage) {
+            overlayPreviewVisible = false
+        }
+    }
+
+    LaunchedEffect(
+        overlayPreviewVisible,
+        overlayBackgroundUri,
+        overlayTransparencyPercent,
+        preferences.bigAfter,
+        preferences.bigFor,
+        preferences.smallFor,
+    ) {
+        if (!overlayPreviewVisible) {
+            previewController.release()
+            return@LaunchedEffect
+        }
+
+        val showBigBreakStyle = preferences.bigAfter > 0
+        val previewDuration = if (showBigBreakStyle) preferences.bigFor else preferences.smallFor
+        previewController.render(
+            state = BreakState(
+                mode = SessionMode.BREAK,
+                phase = BreakPhase.FULL_SCREEN,
+                secondsToNextBreak = 0,
+                isBigBreak = showBigBreakStyle,
+                breakSecondsRemaining = previewDuration,
+            ),
+            appEnabled = true,
+            overlayBackgroundUri = overlayBackgroundUri,
+            overlayTransparencyPercent = overlayTransparencyPercent,
+        )
+    }
+
     val selectedPackages = parsePackageList(monitoredApps)
     val filteredApps = installedApps.filter {
         appSearch.isBlank() ||
@@ -788,20 +870,36 @@ private fun SettingsPage(
             maxValue = 1800,
             onValueChange = { onPreferencesChange(preferences.copy(smallFor = it)) },
         )
-        NumberInputField(
-            label = stringResource(R.string.settings_big_after),
-            value = preferences.bigAfter,
-            minValue = 1,
-            maxValue = 20,
-            onValueChange = { onPreferencesChange(preferences.copy(bigAfter = it)) },
-        )
-        NumberInputField(
-            label = stringResource(R.string.settings_big_for),
-            value = preferences.bigFor,
-            minValue = 10,
-            maxValue = 3600,
-            onValueChange = { onPreferencesChange(preferences.copy(bigFor = it)) },
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.settings_enable_big_break), modifier = Modifier.weight(1f))
+            Switch(
+                checked = preferences.bigAfter > 0,
+                onCheckedChange = { enabled ->
+                    val nextBigAfter = if (enabled) {
+                        if (preferences.bigAfter > 0) preferences.bigAfter else BreakPreferences().bigAfter
+                    } else {
+                        0
+                    }
+                    onPreferencesChange(preferences.copy(bigAfter = nextBigAfter))
+                }
+            )
+        }
+        if (preferences.bigAfter > 0) {
+            NumberInputField(
+                label = stringResource(R.string.settings_big_after),
+                value = preferences.bigAfter,
+                minValue = 1,
+                maxValue = 20,
+                onValueChange = { onPreferencesChange(preferences.copy(bigAfter = it)) },
+            )
+            NumberInputField(
+                label = stringResource(R.string.settings_big_for),
+                value = preferences.bigFor,
+                minValue = 10,
+                maxValue = 3600,
+                onValueChange = { onPreferencesChange(preferences.copy(bigFor = it)) },
+            )
+        }
 
         Text(stringResource(R.string.settings_reminder), style = MaterialTheme.typography.titleLarge)
         NumberInputField(
@@ -877,13 +975,27 @@ private fun SettingsPage(
             },
             style = MaterialTheme.typography.bodyMedium,
         )
-        Text(stringResource(R.string.settings_overlay_preview), style = MaterialTheme.typography.titleMedium)
-        OverlayBackgroundPreview(
-            overlayBackgroundUri = overlayBackgroundUri,
-            overlayTransparencyPercent = overlayTransparencyPercent,
-        )
+        Button(
+            onClick = { overlayPreviewVisible = !overlayPreviewVisible },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                text = if (overlayPreviewVisible) {
+                    stringResource(R.string.action_cancel)
+                } else {
+                    stringResource(R.string.settings_overlay_preview)
+                }
+            )
+        }
 
         Text(stringResource(R.string.settings_general), style = MaterialTheme.typography.titleLarge)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.settings_persistent_notification), modifier = Modifier.weight(1f))
+            Switch(
+                checked = persistentNotificationEnabled,
+                onCheckedChange = onPersistentNotificationEnabledChange,
+            )
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.settings_auto_start_on_boot), modifier = Modifier.weight(1f))
             Switch(checked = autoStartOnBoot, onCheckedChange = onAutoStartOnBootChange)
@@ -893,70 +1005,6 @@ private fun SettingsPage(
             Switch(checked = excludeFromRecents, onCheckedChange = onExcludeFromRecentsChange)
         }
         Text(stringResource(R.string.settings_lang_hint))
-    }
-}
-
-@Composable
-private fun OverlayBackgroundPreview(
-    overlayBackgroundUri: String,
-    overlayTransparencyPercent: Int,
-) {
-    val context = LocalContext.current
-    val previewBitmap by produceState<android.graphics.Bitmap?>(initialValue = null, key1 = overlayBackgroundUri) {
-        value = if (overlayBackgroundUri.isBlank()) {
-            null
-        } else {
-            withContext(Dispatchers.IO) {
-                runCatching {
-                    context.contentResolver.openInputStream(Uri.parse(overlayBackgroundUri)).use { stream ->
-                        stream?.let { BitmapFactory.decodeStream(it) }
-                    }
-                }.getOrNull()
-            }
-        }
-    }
-
-    val dimAlpha = ((100 - overlayTransparencyPercent.coerceIn(0, 90)) / 100f).coerceIn(0.10f, 1f)
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(176.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF101010)),
-        contentAlignment = Alignment.Center,
-    ) {
-        previewBitmap?.let {
-            Image(
-                bitmap = it.asImageBitmap(),
-                contentDescription = stringResource(R.string.settings_overlay_preview),
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = dimAlpha))
-        )
-
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = if (previewBitmap == null) {
-                    stringResource(R.string.settings_overlay_image_none)
-                } else {
-                    stringResource(R.string.settings_overlay_preview)
-                },
-                color = Color.White,
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = "12:34",
-                color = Color.White,
-                style = MaterialTheme.typography.headlineLarge,
-            )
-        }
     }
 }
 

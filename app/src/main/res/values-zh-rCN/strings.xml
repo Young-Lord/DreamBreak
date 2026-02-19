@@ -4,8 +4,10 @@
     <string name="notification_title">护眼提醒已开启</string>
     <string name="notification_title_breaking">正在休息中</string>
     <string name="notification_title_countdown">距离下次休息 %1$s</string>
+    <string name="notification_title_progress">已完成：小休 %1$d 次 / 大休 %2$d 次</string>
     <string name="notification_content">可在通知栏快速开始休息或延后。</string>
     <string name="notification_content_near">即将进入休息，请尽快收尾当前任务。</string>
+    <string name="notification_content_next">下个%1$s还有 %2$s</string>
     <string name="notification_action_break_now">立即休息</string>
     <string name="notification_action_postpone">延后</string>
     <string name="nav_home">主页</string>
@@ -48,6 +50,8 @@
     <string name="settings_small_for">小休时长（秒）</string>
     <string name="settings_big_after">几次小休后触发大休</string>
     <string name="settings_big_for">大休时长（秒）</string>
+    <string name="settings_enable_big_break">启用大休息</string>
+    <string name="settings_big_break_disabled_hint">大休息已关闭。</string>
     <string name="settings_flash_for">顶部闪窗时长（秒）</string>
     <string name="settings_postpone_for">延后时长（秒）</string>
     <string name="settings_reset_interval_after_pause">暂停后重置间隔阈值（秒）</string>
@@ -66,6 +70,7 @@
     <string name="settings_overlay_image_none">未选择背景图片</string>
     <string name="settings_overlay_preview">遮盖预览</string>
     <string name="settings_auto_start_on_boot">开机自启动</string>
+    <string name="settings_persistent_notification">常驻通知</string>
     <string name="action_back">返回</string>
     <string name="settings_lang_hint">当前先支持中文，英文等后续加。</string>
     <string name="settings_no_usage_access">未授予使用情况访问权限，无法自动识别前台应用暂停。</string>

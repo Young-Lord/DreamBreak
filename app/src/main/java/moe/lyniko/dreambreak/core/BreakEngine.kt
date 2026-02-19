@@ -44,6 +44,8 @@ data class BreakState(
     val breakSecondsRemaining: Int = 0,
     val pauseReasons: Set<PauseReason> = emptySet(),
     val modeBeforePause: SessionMode? = null,
+    val completedSmallBreaks: Int = 0,
+    val completedBigBreaks: Int = 0,
 ) {
     companion object {
         fun initial(preferences: BreakPreferences): BreakState {
@@ -229,6 +231,8 @@ object BreakEngine {
     }
 
     private fun finishBreakAndStartNextCycle(state: BreakState, preferences: BreakPreferences): BreakState {
+        val completedSmallBreaks = state.completedSmallBreaks + if (state.isBigBreak) 0 else 1
+        val completedBigBreaks = state.completedBigBreaks + if (state.isBigBreak) 1 else 0
         return state.copy(
             mode = SessionMode.NORMAL,
             phase = null,
@@ -237,6 +241,8 @@ object BreakEngine {
             isBigBreak = false,
             promptSecondsElapsed = 0,
             breakSecondsRemaining = 0,
+            completedSmallBreaks = completedSmallBreaks,
+            completedBigBreaks = completedBigBreaks,
         )
     }
 }

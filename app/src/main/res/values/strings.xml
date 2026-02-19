@@ -4,8 +4,10 @@
     <string name="notification_title">Eye break reminder active</string>
     <string name="notification_title_breaking">On break now</string>
     <string name="notification_title_countdown">Next break in %1$s</string>
+    <string name="notification_title_progress">Done: %1$d small / %2$d big</string>
     <string name="notification_content">Tap action to break now or postpone.</string>
     <string name="notification_content_near">Break is near, wrap up current work.</string>
+    <string name="notification_content_next">Next %1$s in %2$s</string>
     <string name="notification_action_break_now">Break now</string>
     <string name="notification_action_postpone">Postpone</string>
     <string name="nav_home">Home</string>
@@ -48,6 +50,8 @@
     <string name="settings_small_for">Small break duration (sec)</string>
     <string name="settings_big_after">Small breaks before big break</string>
     <string name="settings_big_for">Big break duration (sec)</string>
+    <string name="settings_enable_big_break">Enable big break</string>
+    <string name="settings_big_break_disabled_hint">Big break is disabled.</string>
     <string name="settings_flash_for">Top flash duration (sec)</string>
     <string name="settings_postpone_for">Postpone duration (sec)</string>
     <string name="settings_reset_interval_after_pause">Reset interval after pause (sec)</string>
@@ -66,6 +70,7 @@
     <string name="settings_overlay_image_none">No background image selected</string>
     <string name="settings_overlay_preview">Overlay preview</string>
     <string name="settings_auto_start_on_boot">Auto start on boot</string>
+    <string name="settings_persistent_notification">Persistent notification</string>
     <string name="action_back">Back</string>
     <string name="settings_lang_hint">Chinese is implemented now; English can be expanded later.</string>
     <string name="settings_no_usage_access">Usage access disabled, app-based pause cannot auto-detect.</string>

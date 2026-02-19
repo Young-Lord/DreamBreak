@@ -22,6 +22,7 @@ data class AppSettings(
     val overlayBackgroundUri: String = "",
     val onboardingCompleted: Boolean = false,
     val excludeFromRecents: Boolean = false,
+    val persistentNotificationEnabled: Boolean = false,
 )
 
 class SettingsStore(private val context: Context) {
@@ -46,6 +47,7 @@ class SettingsStore(private val context: Context) {
             overlayBackgroundUri = prefs[Keys.OVERLAY_BACKGROUND_URI] ?: "",
             onboardingCompleted = prefs[Keys.ONBOARDING_COMPLETED] ?: false,
             excludeFromRecents = prefs[Keys.EXCLUDE_FROM_RECENTS] ?: false,
+            persistentNotificationEnabled = prefs[Keys.PERSISTENT_NOTIFICATION_ENABLED] ?: false,
         )
     }
 
@@ -67,6 +69,7 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.OVERLAY_BACKGROUND_URI] = settings.overlayBackgroundUri
             prefs[Keys.ONBOARDING_COMPLETED] = settings.onboardingCompleted
             prefs[Keys.EXCLUDE_FROM_RECENTS] = settings.excludeFromRecents
+            prefs[Keys.PERSISTENT_NOTIFICATION_ENABLED] = settings.persistentNotificationEnabled
         }
     }
 
@@ -87,5 +90,6 @@ class SettingsStore(private val context: Context) {
         val OVERLAY_BACKGROUND_URI = stringPreferencesKey("overlay_background_uri")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
         val EXCLUDE_FROM_RECENTS = booleanPreferencesKey("exclude_from_recents")
+        val PERSISTENT_NOTIFICATION_ENABLED = booleanPreferencesKey("persistent_notification_enabled")
     }
 }
