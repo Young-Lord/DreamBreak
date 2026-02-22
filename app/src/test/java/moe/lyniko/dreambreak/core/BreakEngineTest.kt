@@ -166,4 +166,30 @@ class BreakEngineTest {
         assertEquals(SessionMode.NORMAL, state.mode)
         assertEquals(4, state.secondsToNextBreak)
     }
+
+    @Test
+    fun `complete break session marks active break as finished`() {
+        var state = BreakEngine.requestBreakNow(BreakState.initial(preferences), preferences)
+        repeat(2) {
+            state = BreakEngine.tick(state, preferences)
+        }
+
+        state = BreakEngine.completeBreakSession(state, preferences)
+
+        assertEquals(SessionMode.NORMAL, state.mode)
+        assertEquals(preferences.smallEvery, state.secondsToNextBreak)
+        assertEquals(1, state.completedSmallBreaks)
+    }
+
+    @Test
+    fun `complete break session also works for paused break`() {
+        var state = BreakEngine.requestBreakNow(BreakState.initial(preferences), preferences)
+        state = BreakEngine.setPauseReason(state, PauseReason.APP_OPEN, active = true, preferences = preferences)
+
+        state = BreakEngine.completeBreakSession(state, preferences)
+
+        assertEquals(SessionMode.NORMAL, state.mode)
+        assertEquals(preferences.smallEvery, state.secondsToNextBreak)
+        assertEquals(1, state.completedSmallBreaks)
+    }
 }

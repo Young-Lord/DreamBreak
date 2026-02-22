@@ -170,6 +170,22 @@ object BreakEngine {
         return finishBreakAndStartNextCycle(state, preferences)
     }
 
+    fun completeBreakSession(state: BreakState, preferences: BreakPreferences): BreakState {
+        val activeBreakState = when {
+            state.mode == SessionMode.BREAK -> state
+            state.mode == SessionMode.PAUSED && state.modeBeforePause == SessionMode.BREAK -> {
+                state.copy(
+                    mode = SessionMode.BREAK,
+                    modeBeforePause = null,
+                )
+            }
+
+            else -> return state
+        }
+
+        return finishBreakAndStartNextCycle(activeBreakState, preferences)
+    }
+
     private fun tickNormal(state: BreakState, preferences: BreakPreferences): BreakState {
         val next = state.copy(
             secondsToNextBreak = state.secondsToNextBreak - 1,

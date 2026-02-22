@@ -206,17 +206,20 @@ object BreakRuntime {
     fun setScreenLocked(locked: Boolean) {
         val current = _uiState.value
         if (locked) {
-            // Screen off: pause the timer with SLEEP reason
+            val stateAfterCompletingBreak = BreakEngine.completeBreakSession(
+                state = current.state,
+                preferences = current.preferences,
+            )
+
             _uiState.value = current.copy(
                 state = BreakEngine.setPauseReason(
-                    state = current.state,
+                    state = stateAfterCompletingBreak,
                     reason = PauseReason.SLEEP,
                     active = true,
                     preferences = current.preferences,
                 )
             )
         } else {
-            // Screen unlocked: unpause and always reset countdown to full interval
             val unpaused = BreakEngine.setPauseReason(
                 state = current.state,
                 reason = PauseReason.SLEEP,

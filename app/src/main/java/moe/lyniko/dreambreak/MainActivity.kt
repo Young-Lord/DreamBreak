@@ -316,13 +316,11 @@ fun DreamBreakApp() {
 
     LaunchedEffect(uiState.pauseInListedApps, uiState.monitoredApps) {
         while (true) {
-            val shouldPause = if (uiState.pauseInListedApps && ForegroundAppMonitor.hasUsageAccess(context)) {
-                val monitoredPackages = parsePackageList(uiState.monitoredApps)
-                val topPackage = ForegroundAppMonitor.currentForegroundPackage(context)
-                monitoredPackages.contains(topPackage)
-            } else {
-                false
-            }
+            val shouldPause = shouldPauseForForegroundApp(
+                context = context,
+                pauseInListedApps = uiState.pauseInListedApps,
+                monitoredApps = uiState.monitoredApps,
+            )
             BreakRuntime.setAppPauseActive(shouldPause)
             delay(2000)
         }
@@ -396,8 +394,26 @@ fun DreamBreakApp() {
                                 uiState.persistentNotificationUpdateFrequencySeconds,
                             themeMode = uiState.themeMode,
                             onPreferencesChange = { BreakRuntime.updatePreferences(it) },
-                            onPauseInListedAppsChange = { BreakRuntime.setPauseInListedApps(it) },
-                            onMonitoredAppsChange = { BreakRuntime.setMonitoredApps(it) },
+                            onPauseInListedAppsChange = { enabled ->
+                                BreakRuntime.setPauseInListedApps(enabled)
+                                BreakRuntime.setAppPauseActive(
+                                    shouldPauseForForegroundApp(
+                                        context = context,
+                                        pauseInListedApps = enabled,
+                                        monitoredApps = uiState.monitoredApps,
+                                    )
+                                )
+                            },
+                            onMonitoredAppsChange = { monitoredApps ->
+                                BreakRuntime.setMonitoredApps(monitoredApps)
+                                BreakRuntime.setAppPauseActive(
+                                    shouldPauseForForegroundApp(
+                                        context = context,
+                                        pauseInListedApps = uiState.pauseInListedApps,
+                                        monitoredApps = monitoredApps,
+                                    )
+                                )
+                            },
                             onAutoStartOnBootChange = { BreakRuntime.setAutoStartOnBoot(it) },
                             onOverlayTransparencyPercentChange = { BreakRuntime.setOverlayTransparencyPercent(it) },
                             onPickOverlayImage = { overlayPicker.launch(arrayOf("image/*")) },
@@ -1520,6 +1536,24 @@ private fun parsePackageList(csv: String): Set<String> {
         .map { it.trim() }
         .filter { it.isNotEmpty() }
         .toSet()
+}
+
+private fun shouldPauseForForegroundApp(
+    context: Context,
+    pauseInListedApps: Boolean,
+    monitoredApps: String,
+): Boolean {
+    if (!pauseInListedApps || !ForegroundAppMonitor.hasUsageAccess(context)) {
+        return false
+    }
+
+    val monitoredPackages = parsePackageList(monitoredApps)
+    if (monitoredPackages.isEmpty()) {
+        return false
+    }
+
+    val topPackage = ForegroundAppMonitor.currentForegroundPackage(context)
+    return monitoredPackages.contains(topPackage)
 }
 
 private fun formatMinutesSecondsNoLeadingZero(rawSeconds: Int): String {
