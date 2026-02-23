@@ -9,6 +9,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import moe.lyniko.dreambreak.MainActivity
+import moe.lyniko.dreambreak.core.BreakRuntime
 import moe.lyniko.dreambreak.data.SettingsStore
 import moe.lyniko.dreambreak.notification.BreakReminderService
 
@@ -22,14 +23,29 @@ class BootCompletedReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             runCatching {
-                val settings = SettingsStore(context.applicationContext).settingsFlow.first()
+                val appContext = context.applicationContext
+                val settings = SettingsStore(appContext).settingsFlow.first()
+                BreakRuntime.restoreSettings(
+                    preferences = settings.preferences,
+                    pauseInListedApps = settings.pauseInListedApps,
+                    monitoredApps = settings.monitoredApps,
+                    autoStartOnBoot = settings.autoStartOnBoot,
+                    appEnabled = settings.appEnabled,
+                    overlayTransparencyPercent = settings.overlayTransparencyPercent,
+                    overlayBackgroundUri = settings.overlayBackgroundUri,
+                    onboardingCompleted = settings.onboardingCompleted,
+                    excludeFromRecents = settings.excludeFromRecents,
+                    persistentNotificationEnabled = settings.persistentNotificationEnabled,
+                    persistentNotificationUpdateFrequencySeconds = settings.persistentNotificationUpdateFrequencySeconds,
+                    themeMode = settings.themeMode,
+                )
                 if (
                     settings.autoStartOnBoot &&
                     settings.appEnabled &&
                     settings.persistentNotificationEnabled &&
-                    MainActivity.hasNotificationPermission(context.applicationContext)
+                    MainActivity.hasNotificationPermission(appContext)
                 ) {
-                    BreakReminderService.start(context.applicationContext)
+                    BreakReminderService.start(appContext)
                 }
             }
             pendingResult.finish()
