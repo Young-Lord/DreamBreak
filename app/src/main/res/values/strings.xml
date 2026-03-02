@@ -82,6 +82,9 @@
     <string name="settings_auto_start_on_boot">Auto start on boot</string>
     <string name="settings_persistent_notification">Persistent notification</string>
     <string name="settings_persistent_notification_update_frequency">Persistent notification update interval (sec)</string>
+    <string name="settings_persistent_notification_title_template">Persistent notification title template</string>
+    <string name="settings_persistent_notification_content_template">Persistent notification content template</string>
+    <string name="settings_persistent_notification_placeholders">Placeholders: $doneSmallBreak, $doneBigBreak, $timeToNextBreak, $nextBreakType</string>
     <string name="settings_pre_break_notification">Pre-break Android notification</string>
     <string name="settings_pre_break_notification_lead_seconds">Pre-break notification lead time (sec)</string>
     <string name="settings_pre_break_notification_small_title">Pre-break title (small break)</string>

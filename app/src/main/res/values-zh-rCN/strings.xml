@@ -82,6 +82,9 @@
     <string name="settings_auto_start_on_boot">开机自启动</string>
     <string name="settings_persistent_notification">常驻通知</string>
     <string name="settings_persistent_notification_update_frequency">持久通知更新频率（秒）</string>
+    <string name="settings_persistent_notification_title_template">持久通知标题模板</string>
+    <string name="settings_persistent_notification_content_template">持久通知内容模板</string>
+    <string name="settings_persistent_notification_placeholders">可用占位符：$doneSmallBreak、$doneBigBreak、$timeToNextBreak、$nextBreakType</string>
     <string name="settings_pre_break_notification">休息前通知</string>
     <string name="settings_pre_break_notification_lead_seconds">通知提前秒数</string>
     <string name="settings_pre_break_notification_small_title">小休通知标题</string>

@@ -153,7 +153,7 @@ class BreakEngineTest {
     }
 
     @Test
-    fun `resuming from pause keeps current countdown`() {
+    fun `resuming from app pause resets countdown floor to interval`() {
         var state = BreakState.initial(preferences)
         state = BreakEngine.tick(state, preferences)
         state = BreakEngine.setPauseReason(state, PauseReason.APP_OPEN, active = true, preferences = preferences)
@@ -163,6 +163,51 @@ class BreakEngineTest {
         }
 
         state = BreakEngine.setPauseReason(state, PauseReason.APP_OPEN, active = false, preferences = preferences)
+        assertEquals(SessionMode.NORMAL, state.mode)
+        assertEquals(preferences.smallEvery, state.secondsToNextBreak)
+    }
+
+    @Test
+    fun `resuming from app pause keeps longer postponed countdown`() {
+        var state = BreakState.initial(preferences)
+        state = BreakEngine.postponeBreakForSeconds(state, 900)
+        state = BreakEngine.setPauseReason(state, PauseReason.APP_OPEN, active = true, preferences = preferences)
+
+        repeat(6) {
+            state = BreakEngine.tick(state, preferences)
+        }
+
+        state = BreakEngine.setPauseReason(state, PauseReason.APP_OPEN, active = false, preferences = preferences)
+        assertEquals(SessionMode.NORMAL, state.mode)
+        assertEquals(900, state.secondsToNextBreak)
+    }
+
+    @Test
+    fun `resuming from sleep pause resets countdown floor to interval`() {
+        var state = BreakState.initial(preferences)
+        state = BreakEngine.tick(state, preferences)
+        state = BreakEngine.setPauseReason(state, PauseReason.SLEEP, active = true, preferences = preferences)
+
+        repeat(6) {
+            state = BreakEngine.tick(state, preferences)
+        }
+
+        state = BreakEngine.setPauseReason(state, PauseReason.SLEEP, active = false, preferences = preferences)
+        assertEquals(SessionMode.NORMAL, state.mode)
+        assertEquals(preferences.smallEvery, state.secondsToNextBreak)
+    }
+
+    @Test
+    fun `resuming from idle pause keeps current countdown`() {
+        var state = BreakState.initial(preferences)
+        state = BreakEngine.tick(state, preferences)
+        state = BreakEngine.setPauseReason(state, PauseReason.IDLE, active = true, preferences = preferences)
+
+        repeat(6) {
+            state = BreakEngine.tick(state, preferences)
+        }
+
+        state = BreakEngine.setPauseReason(state, PauseReason.IDLE, active = false, preferences = preferences)
         assertEquals(SessionMode.NORMAL, state.mode)
         assertEquals(4, state.secondsToNextBreak)
     }

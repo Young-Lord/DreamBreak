@@ -37,6 +37,8 @@ class BootCompletedReceiver : BroadcastReceiver() {
                     excludeFromRecents = settings.excludeFromRecents,
                     persistentNotificationEnabled = settings.persistentNotificationEnabled,
                     persistentNotificationUpdateFrequencySeconds = settings.persistentNotificationUpdateFrequencySeconds,
+                    persistentNotificationTitleTemplate = settings.persistentNotificationTitleTemplate,
+                    persistentNotificationContentTemplate = settings.persistentNotificationContentTemplate,
                     themeMode = settings.themeMode,
                 )
                 if (

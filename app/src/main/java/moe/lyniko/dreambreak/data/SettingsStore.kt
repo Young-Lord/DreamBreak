@@ -9,6 +9,8 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import moe.lyniko.dreambreak.core.BreakPreferences
+import moe.lyniko.dreambreak.core.DEFAULT_PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE
+import moe.lyniko.dreambreak.core.DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE
 import moe.lyniko.dreambreak.core.formatPostponeDurations
 import moe.lyniko.dreambreak.core.parsePostponeDurations
 
@@ -26,6 +28,8 @@ data class AppSettings(
     val excludeFromRecents: Boolean = false,
     val persistentNotificationEnabled: Boolean = false,
     val persistentNotificationUpdateFrequencySeconds: Int = 10,
+    val persistentNotificationTitleTemplate: String = DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE,
+    val persistentNotificationContentTemplate: String = DEFAULT_PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE,
     val themeMode: AppThemeMode = AppThemeMode.FOLLOW_SYSTEM,
 )
 
@@ -72,6 +76,12 @@ class SettingsStore(private val context: Context) {
             persistentNotificationEnabled = prefs[Keys.PERSISTENT_NOTIFICATION_ENABLED] ?: false,
             persistentNotificationUpdateFrequencySeconds =
                 (prefs[Keys.PERSISTENT_NOTIFICATION_UPDATE_FREQUENCY_SECONDS] ?: 10).coerceIn(1, 600),
+            persistentNotificationTitleTemplate =
+                prefs[Keys.PERSISTENT_NOTIFICATION_TITLE_TEMPLATE]
+                    ?: DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE,
+            persistentNotificationContentTemplate =
+                prefs[Keys.PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE]
+                    ?: DEFAULT_PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE,
             themeMode = AppThemeMode.fromStorage(prefs[Keys.THEME_MODE]),
         )
     }
@@ -115,6 +125,11 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.PERSISTENT_NOTIFICATION_ENABLED] = settings.persistentNotificationEnabled
             prefs[Keys.PERSISTENT_NOTIFICATION_UPDATE_FREQUENCY_SECONDS] =
                 settings.persistentNotificationUpdateFrequencySeconds.coerceIn(1, 600)
+            prefs[Keys.PERSISTENT_NOTIFICATION_TITLE_TEMPLATE] =
+                settings.persistentNotificationTitleTemplate.trim()
+                    .ifBlank { DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE }
+            prefs[Keys.PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE] =
+                settings.persistentNotificationContentTemplate.trim()
             prefs[Keys.THEME_MODE] = settings.themeMode.storageValue
         }
     }
@@ -149,6 +164,10 @@ class SettingsStore(private val context: Context) {
         val PERSISTENT_NOTIFICATION_ENABLED = booleanPreferencesKey("persistent_notification_enabled")
         val PERSISTENT_NOTIFICATION_UPDATE_FREQUENCY_SECONDS =
             intPreferencesKey("persistent_notification_update_frequency_seconds")
+        val PERSISTENT_NOTIFICATION_TITLE_TEMPLATE =
+            stringPreferencesKey("persistent_notification_title_template")
+        val PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE =
+            stringPreferencesKey("persistent_notification_content_template")
         val THEME_MODE = intPreferencesKey("theme_mode")
     }
 }

@@ -102,6 +102,7 @@ import moe.lyniko.dreambreak.core.BreakPhase
 import moe.lyniko.dreambreak.core.BreakPreferences
 import moe.lyniko.dreambreak.core.BreakRuntime
 import moe.lyniko.dreambreak.core.BreakState
+import moe.lyniko.dreambreak.core.DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE
 import moe.lyniko.dreambreak.core.SessionMode
 import moe.lyniko.dreambreak.core.formatPostponeDurations
 import moe.lyniko.dreambreak.core.normalizePostponeDurationInput
@@ -247,6 +248,8 @@ fun DreamBreakApp() {
                 excludeFromRecents = settings.excludeFromRecents,
                 persistentNotificationEnabled = settings.persistentNotificationEnabled,
                 persistentNotificationUpdateFrequencySeconds = settings.persistentNotificationUpdateFrequencySeconds,
+                persistentNotificationTitleTemplate = settings.persistentNotificationTitleTemplate,
+                persistentNotificationContentTemplate = settings.persistentNotificationContentTemplate,
                 themeMode = settings.themeMode,
             )
             settingsLoaded = true
@@ -265,6 +268,8 @@ fun DreamBreakApp() {
         uiState.excludeFromRecents,
         uiState.persistentNotificationEnabled,
         uiState.persistentNotificationUpdateFrequencySeconds,
+        uiState.persistentNotificationTitleTemplate,
+        uiState.persistentNotificationContentTemplate,
         uiState.themeMode,
         settingsLoaded,
     ) {
@@ -285,6 +290,8 @@ fun DreamBreakApp() {
                 excludeFromRecents = uiState.excludeFromRecents,
                 persistentNotificationEnabled = uiState.persistentNotificationEnabled,
                 persistentNotificationUpdateFrequencySeconds = uiState.persistentNotificationUpdateFrequencySeconds,
+                persistentNotificationTitleTemplate = uiState.persistentNotificationTitleTemplate,
+                persistentNotificationContentTemplate = uiState.persistentNotificationContentTemplate,
                 themeMode = uiState.themeMode,
             )
         )
@@ -392,6 +399,10 @@ fun DreamBreakApp() {
                             persistentNotificationEnabled = uiState.persistentNotificationEnabled,
                             persistentNotificationUpdateFrequencySeconds =
                                 uiState.persistentNotificationUpdateFrequencySeconds,
+                            persistentNotificationTitleTemplate =
+                                uiState.persistentNotificationTitleTemplate,
+                            persistentNotificationContentTemplate =
+                                uiState.persistentNotificationContentTemplate,
                             themeMode = uiState.themeMode,
                             onPreferencesChange = { BreakRuntime.updatePreferences(it) },
                             onPauseInListedAppsChange = { enabled ->
@@ -432,6 +443,12 @@ fun DreamBreakApp() {
                             },
                             onPersistentNotificationUpdateFrequencySecondsChange = {
                                 BreakRuntime.setPersistentNotificationUpdateFrequencySeconds(it)
+                            },
+                            onPersistentNotificationTitleTemplateChange = {
+                                BreakRuntime.setPersistentNotificationTitleTemplate(it)
+                            },
+                            onPersistentNotificationContentTemplateChange = {
+                                BreakRuntime.setPersistentNotificationContentTemplate(it)
                             },
                             onOpenPreBreakNotificationChannelSettings = {
                                 MainActivity.openNotificationChannelSettings(
@@ -833,6 +850,8 @@ private fun SettingsPage(
     excludeFromRecents: Boolean,
     persistentNotificationEnabled: Boolean,
     persistentNotificationUpdateFrequencySeconds: Int,
+    persistentNotificationTitleTemplate: String,
+    persistentNotificationContentTemplate: String,
     themeMode: AppThemeMode,
     onPreferencesChange: (BreakPreferences) -> Unit,
     onPauseInListedAppsChange: (Boolean) -> Unit,
@@ -845,10 +864,15 @@ private fun SettingsPage(
     onThemeModeChange: (AppThemeMode) -> Unit,
     onPersistentNotificationEnabledChange: (Boolean) -> Unit,
     onPersistentNotificationUpdateFrequencySecondsChange: (Int) -> Unit,
+    onPersistentNotificationTitleTemplateChange: (String) -> Unit,
+    onPersistentNotificationContentTemplateChange: (String) -> Unit,
     onOpenPreBreakNotificationChannelSettings: () -> Unit,
 ) {
     val context = LocalContext.current
     val defaultPreferences = remember { BreakPreferences() }
+    val defaultPersistentNotificationTitleTemplate = remember {
+        DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE
+    }
     var appSearch by remember { mutableStateOf("") }
     var openSubPage by remember { mutableStateOf(false) }
     var overlayPreviewVisible by remember { mutableStateOf(false) }
@@ -1104,6 +1128,25 @@ private fun SettingsPage(
             maxValue = 600,
             defaultValue = 10,
             onValueChange = onPersistentNotificationUpdateFrequencySecondsChange,
+        )
+        RequiredTextInputField(
+            label = stringResource(R.string.settings_persistent_notification_title_template),
+            value = persistentNotificationTitleTemplate,
+            defaultValue = defaultPersistentNotificationTitleTemplate,
+            required = false,
+            onValueChange = onPersistentNotificationTitleTemplateChange,
+        )
+        RequiredTextInputField(
+            label = stringResource(R.string.settings_persistent_notification_content_template),
+            value = persistentNotificationContentTemplate,
+            defaultValue = "",
+            required = false,
+            onValueChange = onPersistentNotificationContentTemplateChange,
+        )
+        Text(
+            text = stringResource(R.string.settings_persistent_notification_placeholders),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.settings_pre_break_notification), modifier = Modifier.weight(1f))

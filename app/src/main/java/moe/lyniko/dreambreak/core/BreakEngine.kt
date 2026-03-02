@@ -10,6 +10,13 @@ const val DEFAULT_PRE_BREAK_SMALL_TITLE = "Small break is coming"
 const val DEFAULT_PRE_BREAK_SMALL_CONTENT = "Please wrap up current work."
 const val DEFAULT_PRE_BREAK_BIG_TITLE = "Big break is coming"
 const val DEFAULT_PRE_BREAK_BIG_CONTENT = "Please wrap up current work."
+const val PERSISTENT_NOTIFICATION_PLACEHOLDER_DONE_SMALL_BREAK = "\$doneSmallBreak"
+const val PERSISTENT_NOTIFICATION_PLACEHOLDER_DONE_BIG_BREAK = "\$doneBigBreak"
+const val PERSISTENT_NOTIFICATION_PLACEHOLDER_TIME_TO_NEXT_BREAK = "\$timeToNextBreak"
+const val PERSISTENT_NOTIFICATION_PLACEHOLDER_NEXT_BREAK_TYPE = "\$nextBreakType"
+const val DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE =
+    "Next $PERSISTENT_NOTIFICATION_PLACEHOLDER_NEXT_BREAK_TYPE in $PERSISTENT_NOTIFICATION_PLACEHOLDER_TIME_TO_NEXT_BREAK"
+const val DEFAULT_PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE = ""
 
 enum class SessionMode {
     NORMAL,
@@ -116,11 +123,19 @@ object BreakEngine {
         }
 
         val resumedMode = state.modeBeforePause ?: SessionMode.NORMAL
+        val shouldResetCountdownAfterPause = resumedMode == SessionMode.NORMAL &&
+            state.pauseReasons.any { it == PauseReason.APP_OPEN || it == PauseReason.SLEEP }
+        val resumedSecondsToNextBreak = if (shouldResetCountdownAfterPause) {
+            max(state.secondsToNextBreak, preferences.smallEvery.coerceAtLeast(1))
+        } else {
+            state.secondsToNextBreak
+        }
         return state.copy(
             mode = resumedMode,
             modeBeforePause = null,
             pauseReasons = emptySet(),
             secondsPaused = 0,
+            secondsToNextBreak = resumedSecondsToNextBreak,
         )
     }
 

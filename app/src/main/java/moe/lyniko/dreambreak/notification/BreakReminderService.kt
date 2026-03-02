@@ -26,10 +26,15 @@ import moe.lyniko.dreambreak.core.BreakPhase
 import moe.lyniko.dreambreak.core.BreakPreferences
 import moe.lyniko.dreambreak.core.BreakRuntime
 import moe.lyniko.dreambreak.core.BreakState
+import moe.lyniko.dreambreak.core.DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE
 import moe.lyniko.dreambreak.core.DEFAULT_PRE_BREAK_BIG_CONTENT
 import moe.lyniko.dreambreak.core.DEFAULT_PRE_BREAK_BIG_TITLE
 import moe.lyniko.dreambreak.core.DEFAULT_PRE_BREAK_SMALL_CONTENT
 import moe.lyniko.dreambreak.core.DEFAULT_PRE_BREAK_SMALL_TITLE
+import moe.lyniko.dreambreak.core.PERSISTENT_NOTIFICATION_PLACEHOLDER_DONE_BIG_BREAK
+import moe.lyniko.dreambreak.core.PERSISTENT_NOTIFICATION_PLACEHOLDER_DONE_SMALL_BREAK
+import moe.lyniko.dreambreak.core.PERSISTENT_NOTIFICATION_PLACEHOLDER_NEXT_BREAK_TYPE
+import moe.lyniko.dreambreak.core.PERSISTENT_NOTIFICATION_PLACEHOLDER_TIME_TO_NEXT_BREAK
 import moe.lyniko.dreambreak.core.SessionMode
 import moe.lyniko.dreambreak.monitor.ScreenLockReceiver
 import moe.lyniko.dreambreak.overlay.BreakOverlayController
@@ -42,6 +47,8 @@ class BreakReminderService : Service() {
     private var lastNotifiedState: BreakState? = null
     private var lastNotifiedPreferences: BreakPreferences? = null
     private var lastNotifiedNormalModeIntervalSeconds: Int = DEFAULT_NORMAL_MODE_UPDATE_SECONDS
+    private var lastNotifiedTitleTemplate: String = DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE
+    private var lastNotifiedContentTemplate: String = ""
     private var lastNotificationElapsedRealtimeMs: Long = 0L
     private var lastPreBreakNotifiedCycle: Int = -1
 
@@ -75,6 +82,8 @@ class BreakReminderService : Service() {
                     state = uiState.state,
                     preferences = uiState.preferences,
                     normalModeUpdateIntervalSeconds = uiState.persistentNotificationUpdateFrequencySeconds,
+                    titleTemplate = uiState.persistentNotificationTitleTemplate,
+                    contentTemplate = uiState.persistentNotificationContentTemplate,
                 )
                 updatePreBreakNotificationIfNeeded(
                     state = uiState.state,
@@ -104,7 +113,12 @@ class BreakReminderService : Service() {
             return START_NOT_STICKY
         }
 
-        val notification = buildNotification(uiState.state, uiState.preferences)
+        val notification = buildNotification(
+            state = uiState.state,
+            preferences = uiState.preferences,
+            titleTemplate = uiState.persistentNotificationTitleTemplate,
+            contentTemplate = uiState.persistentNotificationContentTemplate,
+        )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
                 NOTIFICATION_ID,
@@ -118,6 +132,8 @@ class BreakReminderService : Service() {
             state = uiState.state,
             preferences = uiState.preferences,
             normalModeUpdateIntervalSeconds = uiState.persistentNotificationUpdateFrequencySeconds,
+            titleTemplate = uiState.persistentNotificationTitleTemplate,
+            contentTemplate = uiState.persistentNotificationContentTemplate,
             atElapsedRealtimeMs = SystemClock.elapsedRealtime(),
         )
         return START_STICKY
@@ -138,22 +154,41 @@ class BreakReminderService : Service() {
         state: BreakState,
         preferences: BreakPreferences,
         normalModeUpdateIntervalSeconds: Int,
+        titleTemplate: String,
+        contentTemplate: String,
     ) {
         val safeIntervalSeconds = normalModeUpdateIntervalSeconds.coerceIn(1, 600)
         val nowElapsedRealtimeMs = SystemClock.elapsedRealtime()
-        if (!shouldNotify(state, preferences, safeIntervalSeconds, nowElapsedRealtimeMs)) {
+        if (!shouldNotify(state, preferences, safeIntervalSeconds, titleTemplate, contentTemplate, nowElapsedRealtimeMs)) {
             return
         }
 
         NotificationManagerCompat.from(this)
-            .notify(NOTIFICATION_ID, buildNotification(state, preferences))
-        recordNotified(state, preferences, safeIntervalSeconds, nowElapsedRealtimeMs)
+            .notify(
+                NOTIFICATION_ID,
+                buildNotification(
+                    state = state,
+                    preferences = preferences,
+                    titleTemplate = titleTemplate,
+                    contentTemplate = contentTemplate,
+                )
+            )
+        recordNotified(
+            state = state,
+            preferences = preferences,
+            normalModeUpdateIntervalSeconds = safeIntervalSeconds,
+            titleTemplate = titleTemplate,
+            contentTemplate = contentTemplate,
+            atElapsedRealtimeMs = nowElapsedRealtimeMs,
+        )
     }
 
     private fun shouldNotify(
         state: BreakState,
         preferences: BreakPreferences,
         normalModeUpdateIntervalSeconds: Int,
+        titleTemplate: String,
+        contentTemplate: String,
         nowElapsedRealtimeMs: Long,
     ): Boolean {
         val previousState = lastNotifiedState ?: return true
@@ -163,6 +198,12 @@ class BreakReminderService : Service() {
             return true
         }
         if (lastNotifiedNormalModeIntervalSeconds != normalModeUpdateIntervalSeconds) {
+            return true
+        }
+        if (
+            lastNotifiedTitleTemplate != titleTemplate ||
+            lastNotifiedContentTemplate != contentTemplate
+        ) {
             return true
         }
         if (
@@ -197,11 +238,15 @@ class BreakReminderService : Service() {
         state: BreakState,
         preferences: BreakPreferences,
         normalModeUpdateIntervalSeconds: Int,
+        titleTemplate: String,
+        contentTemplate: String,
         atElapsedRealtimeMs: Long,
     ) {
         lastNotifiedState = state
         lastNotifiedPreferences = preferences
         lastNotifiedNormalModeIntervalSeconds = normalModeUpdateIntervalSeconds.coerceIn(1, 600)
+        lastNotifiedTitleTemplate = titleTemplate
+        lastNotifiedContentTemplate = contentTemplate
         lastNotificationElapsedRealtimeMs = atElapsedRealtimeMs
     }
 
@@ -282,30 +327,35 @@ class BreakReminderService : Service() {
             .build()
     }
 
-    private fun buildNotification(state: BreakState, preferences: BreakPreferences): android.app.Notification {
+    private fun buildNotification(
+        state: BreakState,
+        preferences: BreakPreferences,
+        titleTemplate: String,
+        contentTemplate: String,
+    ): android.app.Notification {
         val nextBreakType = if (isNextBreakBig(state, preferences)) {
             getString(R.string.break_type_big)
         } else {
             getString(R.string.break_type_small)
         }
         val secondsUntilNextBreak = secondsUntilNextBreak(state, preferences)
-        val content = getString(
-            R.string.notification_content_next,
-            nextBreakType,
-            formatSeconds(secondsUntilNextBreak),
+        val timeToNextBreak = formatSeconds(secondsUntilNextBreak)
+        val title = applyPersistentNotificationTemplate(
+            template = titleTemplate.ifBlank { DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE },
+            state = state,
+            nextBreakType = nextBreakType,
+            timeToNextBreak = timeToNextBreak,
+        )
+        val content = applyPersistentNotificationTemplate(
+            template = contentTemplate,
+            state = state,
+            nextBreakType = nextBreakType,
+            timeToNextBreak = timeToNextBreak,
         )
 
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle(
-                getString(
-                    R.string.notification_title_progress,
-                    state.completedSmallBreaks,
-                    state.completedBigBreaks,
-                )
-            )
-            .setContentText(content)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(content))
+            .setContentTitle(title)
             .setContentIntent(
                 PendingIntent.getActivity(
                     this,
@@ -326,7 +376,27 @@ class BreakReminderService : Service() {
                 postponePickerPendingIntent(),
             )
             .setPriority(NotificationCompat.PRIORITY_LOW)
-            .build()
+
+        if (content.isNotBlank()) {
+            builder
+                .setContentText(content)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(content))
+        }
+
+        return builder.build()
+    }
+
+    private fun applyPersistentNotificationTemplate(
+        template: String,
+        state: BreakState,
+        nextBreakType: String,
+        timeToNextBreak: String,
+    ): String {
+        return template
+            .replace(PERSISTENT_NOTIFICATION_PLACEHOLDER_DONE_SMALL_BREAK, state.completedSmallBreaks.toString())
+            .replace(PERSISTENT_NOTIFICATION_PLACEHOLDER_DONE_BIG_BREAK, state.completedBigBreaks.toString())
+            .replace(PERSISTENT_NOTIFICATION_PLACEHOLDER_TIME_TO_NEXT_BREAK, timeToNextBreak)
+            .replace(PERSISTENT_NOTIFICATION_PLACEHOLDER_NEXT_BREAK_TYPE, nextBreakType)
     }
 
     private fun formatSeconds(rawSeconds: Int): String {

@@ -25,6 +25,8 @@ data class BreakUiState(
     val excludeFromRecents: Boolean = false,
     val persistentNotificationEnabled: Boolean = false,
     val persistentNotificationUpdateFrequencySeconds: Int = 10,
+    val persistentNotificationTitleTemplate: String = DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE,
+    val persistentNotificationContentTemplate: String = DEFAULT_PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE,
     val themeMode: AppThemeMode = AppThemeMode.FOLLOW_SYSTEM,
 )
 
@@ -151,6 +153,16 @@ object BreakRuntime {
         )
     }
 
+    fun setPersistentNotificationTitleTemplate(value: String) {
+        val current = _uiState.value
+        _uiState.value = current.copy(persistentNotificationTitleTemplate = value)
+    }
+
+    fun setPersistentNotificationContentTemplate(value: String) {
+        val current = _uiState.value
+        _uiState.value = current.copy(persistentNotificationContentTemplate = value)
+    }
+
     fun setThemeMode(mode: AppThemeMode) {
         val current = _uiState.value
         _uiState.value = current.copy(themeMode = mode)
@@ -220,15 +232,12 @@ object BreakRuntime {
                 )
             )
         } else {
-            val unpaused = BreakEngine.setPauseReason(
-                state = current.state,
-                reason = PauseReason.SLEEP,
-                active = false,
-                preferences = current.preferences,
-            )
             _uiState.value = current.copy(
-                state = unpaused.copy(
-                    secondsToNextBreak = current.preferences.smallEvery,
+                state = BreakEngine.setPauseReason(
+                    state = current.state,
+                    reason = PauseReason.SLEEP,
+                    active = false,
+                    preferences = current.preferences,
                 )
             )
         }
@@ -246,6 +255,8 @@ object BreakRuntime {
         excludeFromRecents: Boolean,
         persistentNotificationEnabled: Boolean,
         persistentNotificationUpdateFrequencySeconds: Int,
+        persistentNotificationTitleTemplate: String,
+        persistentNotificationContentTemplate: String,
         themeMode: AppThemeMode,
     ) {
         val current = _uiState.value
@@ -262,6 +273,8 @@ object BreakRuntime {
             persistentNotificationEnabled = persistentNotificationEnabled,
             persistentNotificationUpdateFrequencySeconds =
                 persistentNotificationUpdateFrequencySeconds.coerceIn(1, 600),
+            persistentNotificationTitleTemplate = persistentNotificationTitleTemplate,
+            persistentNotificationContentTemplate = persistentNotificationContentTemplate,
             themeMode = themeMode,
             state = current.state.copy(
                 secondsToNextBreak = current.state.secondsToNextBreak.coerceAtMost(preferences.smallEvery)
