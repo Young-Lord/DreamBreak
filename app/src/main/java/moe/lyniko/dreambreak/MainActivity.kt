@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -110,9 +111,11 @@ import moe.lyniko.dreambreak.core.parsePostponeDurations
 import moe.lyniko.dreambreak.data.AppSettings
 import moe.lyniko.dreambreak.data.AppThemeMode
 import moe.lyniko.dreambreak.data.SettingsStore
+import moe.lyniko.dreambreak.monitor.AppPauseMonitor
 import moe.lyniko.dreambreak.monitor.ForegroundAppMonitor
 import moe.lyniko.dreambreak.monitor.InstalledApp
 import moe.lyniko.dreambreak.monitor.InstalledAppsProvider
+import moe.lyniko.dreambreak.monitor.shouldPauseForForegroundApp
 import moe.lyniko.dreambreak.notification.BreakReminderService
 import moe.lyniko.dreambreak.notification.PostponePickerActivity
 import moe.lyniko.dreambreak.overlay.BreakOverlayController
@@ -256,6 +259,10 @@ fun DreamBreakApp() {
         }
     }
 
+    LaunchedEffect(Unit) {
+        AppPauseMonitor.start(context.applicationContext)
+    }
+
     LaunchedEffect(
         uiState.preferences,
         uiState.pauseInListedApps,
@@ -319,18 +326,6 @@ fun DreamBreakApp() {
             return@LaunchedEffect
         }
         (context as? MainActivity)?.applyExcludeFromRecentsSetting(uiState.excludeFromRecents)
-    }
-
-    LaunchedEffect(uiState.pauseInListedApps, uiState.monitoredApps) {
-        while (true) {
-            val shouldPause = shouldPauseForForegroundApp(
-                context = context,
-                pauseInListedApps = uiState.pauseInListedApps,
-                monitoredApps = uiState.monitoredApps,
-            )
-            BreakRuntime.setAppPauseActive(shouldPause)
-            delay(2000)
-        }
     }
 
     // Wait for settings to load before showing anything
@@ -896,6 +891,10 @@ private fun SettingsPage(
         }
     }
 
+    BackHandler(enabled = openSubPage) {
+        openSubPage = false
+    }
+
     LaunchedEffect(
         overlayPreviewVisible,
         overlayBackgroundUri,
@@ -1211,7 +1210,6 @@ private fun SettingsPage(
             Text(stringResource(R.string.settings_exclude_from_recents), modifier = Modifier.weight(1f))
             Switch(checked = excludeFromRecents, onCheckedChange = onExcludeFromRecentsChange)
         }
-        Text(stringResource(R.string.settings_lang_hint))
     }
 }
 
@@ -1579,24 +1577,6 @@ private fun parsePackageList(csv: String): Set<String> {
         .map { it.trim() }
         .filter { it.isNotEmpty() }
         .toSet()
-}
-
-private fun shouldPauseForForegroundApp(
-    context: Context,
-    pauseInListedApps: Boolean,
-    monitoredApps: String,
-): Boolean {
-    if (!pauseInListedApps || !ForegroundAppMonitor.hasUsageAccess(context)) {
-        return false
-    }
-
-    val monitoredPackages = parsePackageList(monitoredApps)
-    if (monitoredPackages.isEmpty()) {
-        return false
-    }
-
-    val topPackage = ForegroundAppMonitor.currentForegroundPackage(context)
-    return monitoredPackages.contains(topPackage)
 }
 
 private fun formatMinutesSecondsNoLeadingZero(rawSeconds: Int): String {

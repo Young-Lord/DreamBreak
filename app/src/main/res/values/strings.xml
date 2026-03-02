@@ -93,7 +93,6 @@
     <string name="settings_pre_break_notification_big_content">Pre-break content (big break)</string>
     <string name="settings_open_pre_break_notification_channel">Open pre-break notification channel settings</string>
     <string name="action_back">Back</string>
-    <string name="settings_lang_hint">Chinese is implemented now; English can be expanded later.</string>
     <string name="settings_no_usage_access">Usage access disabled, app-based pause cannot auto-detect.</string>
     <string name="mode_normal">NORMAL</string>
     <string name="mode_paused">PAUSED</string>

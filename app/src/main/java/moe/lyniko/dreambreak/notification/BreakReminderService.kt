@@ -36,6 +36,7 @@ import moe.lyniko.dreambreak.core.PERSISTENT_NOTIFICATION_PLACEHOLDER_DONE_SMALL
 import moe.lyniko.dreambreak.core.PERSISTENT_NOTIFICATION_PLACEHOLDER_NEXT_BREAK_TYPE
 import moe.lyniko.dreambreak.core.PERSISTENT_NOTIFICATION_PLACEHOLDER_TIME_TO_NEXT_BREAK
 import moe.lyniko.dreambreak.core.SessionMode
+import moe.lyniko.dreambreak.monitor.AppPauseMonitor
 import moe.lyniko.dreambreak.monitor.ScreenLockReceiver
 import moe.lyniko.dreambreak.overlay.BreakOverlayController
 
@@ -55,6 +56,7 @@ class BreakReminderService : Service() {
     override fun onCreate() {
         super.onCreate()
         BreakRuntime.start()
+        AppPauseMonitor.start(applicationContext)
         ensureChannel()
         overlayController = BreakOverlayController(
             this,

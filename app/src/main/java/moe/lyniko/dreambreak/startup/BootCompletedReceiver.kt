@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import moe.lyniko.dreambreak.MainActivity
 import moe.lyniko.dreambreak.core.BreakRuntime
 import moe.lyniko.dreambreak.data.SettingsStore
+import moe.lyniko.dreambreak.monitor.AppPauseMonitor
 import moe.lyniko.dreambreak.notification.BreakReminderService
 
 class BootCompletedReceiver : BroadcastReceiver() {
@@ -41,6 +42,10 @@ class BootCompletedReceiver : BroadcastReceiver() {
                     persistentNotificationContentTemplate = settings.persistentNotificationContentTemplate,
                     themeMode = settings.themeMode,
                 )
+                if (settings.autoStartOnBoot && settings.appEnabled) {
+                    BreakRuntime.start()
+                    AppPauseMonitor.start(appContext)
+                }
                 if (
                     settings.autoStartOnBoot &&
                     settings.appEnabled &&

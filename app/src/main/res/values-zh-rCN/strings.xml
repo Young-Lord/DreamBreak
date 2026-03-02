@@ -93,7 +93,6 @@
     <string name="settings_pre_break_notification_big_content">大休通知内容</string>
     <string name="settings_open_pre_break_notification_channel">打开休息前通知系统设置</string>
     <string name="action_back">返回</string>
-    <string name="settings_lang_hint">当前先支持中文，英文等后续加。</string>
     <string name="settings_no_usage_access">未授予使用情况访问权限，无法自动识别前台应用暂停。</string>
     <string name="mode_normal">NORMAL</string>
     <string name="mode_paused">PAUSED</string>
