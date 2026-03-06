@@ -14,6 +14,7 @@
     <string name="nav_home">主页</string>
     <string name="nav_break">休息</string>
     <string name="nav_settings">设置</string>
+    <string name="qs_tile_label">护眼休息</string>
     <string name="prompt_banner">即将进入休息，请尽快收尾</string>
     <string name="home_countdown">下次休息倒计时 %1$s</string>
     <string name="home_since_last">上次休息后已过 %1$s</string>
@@ -85,6 +86,7 @@
     <string name="settings_persistent_notification_title_template">持久通知标题模板</string>
     <string name="settings_persistent_notification_content_template">持久通知内容模板</string>
     <string name="settings_persistent_notification_placeholders">可用占位符：$doneSmallBreak、$doneBigBreak、$timeToNextBreak、$nextBreakType</string>
+    <string name="settings_qs_tile_countdown_as_title">将快捷开关倒计时显示为标题</string>
     <string name="settings_pre_break_notification">休息前通知</string>
     <string name="settings_pre_break_notification_lead_seconds">通知提前秒数</string>
     <string name="settings_pre_break_notification_small_title">小休通知标题</string>

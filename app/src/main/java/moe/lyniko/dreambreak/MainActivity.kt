@@ -253,6 +253,7 @@ fun DreamBreakApp() {
                 persistentNotificationUpdateFrequencySeconds = settings.persistentNotificationUpdateFrequencySeconds,
                 persistentNotificationTitleTemplate = settings.persistentNotificationTitleTemplate,
                 persistentNotificationContentTemplate = settings.persistentNotificationContentTemplate,
+                qsTileCountdownAsTitle = settings.qsTileCountdownAsTitle,
                 themeMode = settings.themeMode,
             )
             settingsLoaded = true
@@ -277,6 +278,7 @@ fun DreamBreakApp() {
         uiState.persistentNotificationUpdateFrequencySeconds,
         uiState.persistentNotificationTitleTemplate,
         uiState.persistentNotificationContentTemplate,
+        uiState.qsTileCountdownAsTitle,
         uiState.themeMode,
         settingsLoaded,
     ) {
@@ -299,6 +301,7 @@ fun DreamBreakApp() {
                 persistentNotificationUpdateFrequencySeconds = uiState.persistentNotificationUpdateFrequencySeconds,
                 persistentNotificationTitleTemplate = uiState.persistentNotificationTitleTemplate,
                 persistentNotificationContentTemplate = uiState.persistentNotificationContentTemplate,
+                qsTileCountdownAsTitle = uiState.qsTileCountdownAsTitle,
                 themeMode = uiState.themeMode,
             )
         )
@@ -398,6 +401,7 @@ fun DreamBreakApp() {
                                 uiState.persistentNotificationTitleTemplate,
                             persistentNotificationContentTemplate =
                                 uiState.persistentNotificationContentTemplate,
+                            qsTileCountdownAsTitle = uiState.qsTileCountdownAsTitle,
                             themeMode = uiState.themeMode,
                             onPreferencesChange = { BreakRuntime.updatePreferences(it) },
                             onPauseInListedAppsChange = { enabled ->
@@ -444,6 +448,9 @@ fun DreamBreakApp() {
                             },
                             onPersistentNotificationContentTemplateChange = {
                                 BreakRuntime.setPersistentNotificationContentTemplate(it)
+                            },
+                            onQsTileCountdownAsTitleChange = {
+                                BreakRuntime.setQsTileCountdownAsTitle(it)
                             },
                             onOpenPreBreakNotificationChannelSettings = {
                                 MainActivity.openNotificationChannelSettings(
@@ -847,6 +854,7 @@ private fun SettingsPage(
     persistentNotificationUpdateFrequencySeconds: Int,
     persistentNotificationTitleTemplate: String,
     persistentNotificationContentTemplate: String,
+    qsTileCountdownAsTitle: Boolean,
     themeMode: AppThemeMode,
     onPreferencesChange: (BreakPreferences) -> Unit,
     onPauseInListedAppsChange: (Boolean) -> Unit,
@@ -861,6 +869,7 @@ private fun SettingsPage(
     onPersistentNotificationUpdateFrequencySecondsChange: (Int) -> Unit,
     onPersistentNotificationTitleTemplateChange: (String) -> Unit,
     onPersistentNotificationContentTemplateChange: (String) -> Unit,
+    onQsTileCountdownAsTitleChange: (Boolean) -> Unit,
     onOpenPreBreakNotificationChannelSettings: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -1147,6 +1156,13 @@ private fun SettingsPage(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.settings_qs_tile_countdown_as_title), modifier = Modifier.weight(1f))
+            Switch(
+                checked = qsTileCountdownAsTitle,
+                onCheckedChange = onQsTileCountdownAsTitleChange,
+            )
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.settings_pre_break_notification), modifier = Modifier.weight(1f))
             Switch(

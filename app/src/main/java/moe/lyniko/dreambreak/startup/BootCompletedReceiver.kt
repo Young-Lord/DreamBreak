@@ -40,6 +40,7 @@ class BootCompletedReceiver : BroadcastReceiver() {
                     persistentNotificationUpdateFrequencySeconds = settings.persistentNotificationUpdateFrequencySeconds,
                     persistentNotificationTitleTemplate = settings.persistentNotificationTitleTemplate,
                     persistentNotificationContentTemplate = settings.persistentNotificationContentTemplate,
+                    qsTileCountdownAsTitle = settings.qsTileCountdownAsTitle,
                     themeMode = settings.themeMode,
                 )
                 if (settings.autoStartOnBoot && settings.appEnabled) {

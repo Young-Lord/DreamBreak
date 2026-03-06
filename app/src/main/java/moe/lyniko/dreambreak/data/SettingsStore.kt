@@ -30,6 +30,7 @@ data class AppSettings(
     val persistentNotificationUpdateFrequencySeconds: Int = 10,
     val persistentNotificationTitleTemplate: String = DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE,
     val persistentNotificationContentTemplate: String = DEFAULT_PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE,
+    val qsTileCountdownAsTitle: Boolean = false,
     val themeMode: AppThemeMode = AppThemeMode.FOLLOW_SYSTEM,
 )
 
@@ -82,6 +83,7 @@ class SettingsStore(private val context: Context) {
             persistentNotificationContentTemplate =
                 prefs[Keys.PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE]
                     ?: DEFAULT_PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE,
+            qsTileCountdownAsTitle = prefs[Keys.QS_TILE_COUNTDOWN_AS_TITLE] ?: false,
             themeMode = AppThemeMode.fromStorage(prefs[Keys.THEME_MODE]),
         )
     }
@@ -130,6 +132,7 @@ class SettingsStore(private val context: Context) {
                     .ifBlank { DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE }
             prefs[Keys.PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE] =
                 settings.persistentNotificationContentTemplate.trim()
+            prefs[Keys.QS_TILE_COUNTDOWN_AS_TITLE] = settings.qsTileCountdownAsTitle
             prefs[Keys.THEME_MODE] = settings.themeMode.storageValue
         }
     }
@@ -168,6 +171,7 @@ class SettingsStore(private val context: Context) {
             stringPreferencesKey("persistent_notification_title_template")
         val PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE =
             stringPreferencesKey("persistent_notification_content_template")
+        val QS_TILE_COUNTDOWN_AS_TITLE = booleanPreferencesKey("qs_tile_countdown_as_title")
         val THEME_MODE = intPreferencesKey("theme_mode")
     }
 }

@@ -45,6 +45,18 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <service
+            android:name=".tile.DreamBreakTileService"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@drawable/ic_qs_bed"
+            android:label="@string/qs_tile_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
         <receiver
             android:name=".notification.NotificationActionReceiver"
             android:enabled="true"

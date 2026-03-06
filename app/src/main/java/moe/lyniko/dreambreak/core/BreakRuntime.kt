@@ -27,6 +27,7 @@ data class BreakUiState(
     val persistentNotificationUpdateFrequencySeconds: Int = 10,
     val persistentNotificationTitleTemplate: String = DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE,
     val persistentNotificationContentTemplate: String = DEFAULT_PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE,
+    val qsTileCountdownAsTitle: Boolean = false,
     val themeMode: AppThemeMode = AppThemeMode.FOLLOW_SYSTEM,
 )
 
@@ -163,6 +164,11 @@ object BreakRuntime {
         _uiState.value = current.copy(persistentNotificationContentTemplate = value)
     }
 
+    fun setQsTileCountdownAsTitle(enabled: Boolean) {
+        val current = _uiState.value
+        _uiState.value = current.copy(qsTileCountdownAsTitle = enabled)
+    }
+
     fun setThemeMode(mode: AppThemeMode) {
         val current = _uiState.value
         _uiState.value = current.copy(themeMode = mode)
@@ -257,6 +263,7 @@ object BreakRuntime {
         persistentNotificationUpdateFrequencySeconds: Int,
         persistentNotificationTitleTemplate: String,
         persistentNotificationContentTemplate: String,
+        qsTileCountdownAsTitle: Boolean,
         themeMode: AppThemeMode,
     ) {
         val current = _uiState.value
@@ -275,6 +282,7 @@ object BreakRuntime {
                 persistentNotificationUpdateFrequencySeconds.coerceIn(1, 600),
             persistentNotificationTitleTemplate = persistentNotificationTitleTemplate,
             persistentNotificationContentTemplate = persistentNotificationContentTemplate,
+            qsTileCountdownAsTitle = qsTileCountdownAsTitle,
             themeMode = themeMode,
             state = current.state.copy(
                 secondsToNextBreak = current.state.secondsToNextBreak.coerceAtMost(preferences.smallEvery)
