@@ -1052,12 +1052,14 @@ private fun SettingsPage(
                 label = stringResource(R.string.settings_top_flash_small_message),
                 value = preferences.topFlashSmallText,
                 defaultValue = defaultPreferences.topFlashSmallText,
+                required = false,
                 onValueChange = { onPreferencesChange(preferences.copy(topFlashSmallText = it)) },
             )
             RequiredTextInputField(
                 label = stringResource(R.string.settings_top_flash_big_message),
                 value = preferences.topFlashBigText,
                 defaultValue = defaultPreferences.topFlashBigText,
+                required = false,
                 onValueChange = { onPreferencesChange(preferences.copy(topFlashBigText = it)) },
             )
         }
@@ -1185,24 +1187,28 @@ private fun SettingsPage(
                 label = stringResource(R.string.settings_pre_break_notification_small_title),
                 value = preferences.preBreakNotificationSmallTitle,
                 defaultValue = defaultPreferences.preBreakNotificationSmallTitle,
+                required = false,
                 onValueChange = { onPreferencesChange(preferences.copy(preBreakNotificationSmallTitle = it)) },
             )
             RequiredTextInputField(
                 label = stringResource(R.string.settings_pre_break_notification_small_content),
                 value = preferences.preBreakNotificationSmallContent,
                 defaultValue = defaultPreferences.preBreakNotificationSmallContent,
+                required = false,
                 onValueChange = { onPreferencesChange(preferences.copy(preBreakNotificationSmallContent = it)) },
             )
             RequiredTextInputField(
                 label = stringResource(R.string.settings_pre_break_notification_big_title),
                 value = preferences.preBreakNotificationBigTitle,
                 defaultValue = defaultPreferences.preBreakNotificationBigTitle,
+                required = false,
                 onValueChange = { onPreferencesChange(preferences.copy(preBreakNotificationBigTitle = it)) },
             )
             RequiredTextInputField(
                 label = stringResource(R.string.settings_pre_break_notification_big_content),
                 value = preferences.preBreakNotificationBigContent,
                 defaultValue = defaultPreferences.preBreakNotificationBigContent,
+                required = false,
                 onValueChange = { onPreferencesChange(preferences.copy(preBreakNotificationBigContent = it)) },
             )
             Button(
