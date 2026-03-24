@@ -55,7 +55,7 @@
     <string name="settings_theme_mode_follow_system">跟随系统</string>
     <string name="settings_theme_mode_light">浅色</string>
     <string name="settings_theme_mode_dark">深色</string>
-    <string name="settings_small_every">小休间隔（分钟）</string>
+    <string name="settings_small_every">小休间隔（秒）</string>
     <string name="settings_small_for">小休时长（秒）</string>
     <string name="settings_big_after">几次小休后触发大休</string>
     <string name="settings_big_for">大休时长（秒）</string>

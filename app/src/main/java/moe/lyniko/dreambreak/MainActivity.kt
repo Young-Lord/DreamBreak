@@ -984,11 +984,11 @@ private fun SettingsPage(
 
         NumberInputField(
             label = stringResource(R.string.settings_small_every),
-            value = preferences.smallEvery / 60,
-            minValue = 1,
-            maxValue = 720,
-            defaultValue = defaultPreferences.smallEvery / 60,
-            onValueChange = { onPreferencesChange(preferences.copy(smallEvery = it * 60)) },
+            value = preferences.smallEvery,
+            minValue = 60,
+            maxValue = 43200,
+            defaultValue = defaultPreferences.smallEvery,
+            onValueChange = { onPreferencesChange(preferences.copy(smallEvery = it)) },
         )
         NumberInputField(
             label = stringResource(R.string.settings_small_for),
