@@ -38,7 +38,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
@@ -223,6 +222,7 @@ fun DreamBreakApp() {
         value = InstalledAppsProvider.loadLaunchableApps(context.applicationContext)
     }
 
+    var overlayPickerTarget by remember { mutableStateOf(OverlayImageTarget.PORTRAIT) }
     val overlayPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         if (uri == null) {
             return@rememberLauncherForActivityResult
@@ -234,7 +234,10 @@ fun DreamBreakApp() {
                 Intent.FLAG_GRANT_READ_URI_PERMISSION,
             )
         }
-        BreakRuntime.setOverlayBackgroundUri(uri.toString())
+        when (overlayPickerTarget) {
+            OverlayImageTarget.PORTRAIT -> BreakRuntime.setOverlayBackgroundPortraitUri(uri.toString())
+            OverlayImageTarget.LANDSCAPE -> BreakRuntime.setOverlayBackgroundLandscapeUri(uri.toString())
+        }
     }
 
     LaunchedEffect(settingsStore) {
@@ -246,7 +249,8 @@ fun DreamBreakApp() {
                 autoStartOnBoot = settings.autoStartOnBoot,
                 appEnabled = settings.appEnabled,
                 overlayTransparencyPercent = settings.overlayTransparencyPercent,
-                overlayBackgroundUri = settings.overlayBackgroundUri,
+                overlayBackgroundPortraitUri = settings.overlayBackgroundPortraitUri,
+                overlayBackgroundLandscapeUri = settings.overlayBackgroundLandscapeUri,
                 onboardingCompleted = settings.onboardingCompleted,
                 excludeFromRecents = settings.excludeFromRecents,
                 persistentNotificationEnabled = settings.persistentNotificationEnabled,
@@ -254,6 +258,12 @@ fun DreamBreakApp() {
                 persistentNotificationTitleTemplate = settings.persistentNotificationTitleTemplate,
                 persistentNotificationContentTemplate = settings.persistentNotificationContentTemplate,
                 qsTileCountdownAsTitle = settings.qsTileCountdownAsTitle,
+                breakShowPostponeButton = settings.breakShowPostponeButton,
+                breakShowTitle = settings.breakShowTitle,
+                breakShowCountdown = settings.breakShowCountdown,
+                breakShowExitButton = settings.breakShowExitButton,
+                breakExitPostponeSeconds = settings.breakExitPostponeSeconds,
+                breakOverlayAnimationDurationMs = settings.breakOverlayAnimationDurationMs,
                 themeMode = settings.themeMode,
             )
             settingsLoaded = true
@@ -271,7 +281,8 @@ fun DreamBreakApp() {
         uiState.autoStartOnBoot,
         uiState.appEnabled,
         uiState.overlayTransparencyPercent,
-        uiState.overlayBackgroundUri,
+        uiState.overlayBackgroundPortraitUri,
+        uiState.overlayBackgroundLandscapeUri,
         uiState.onboardingCompleted,
         uiState.excludeFromRecents,
         uiState.persistentNotificationEnabled,
@@ -279,6 +290,12 @@ fun DreamBreakApp() {
         uiState.persistentNotificationTitleTemplate,
         uiState.persistentNotificationContentTemplate,
         uiState.qsTileCountdownAsTitle,
+        uiState.breakShowPostponeButton,
+        uiState.breakShowTitle,
+        uiState.breakShowCountdown,
+        uiState.breakShowExitButton,
+        uiState.breakExitPostponeSeconds,
+        uiState.breakOverlayAnimationDurationMs,
         uiState.themeMode,
         settingsLoaded,
     ) {
@@ -294,7 +311,8 @@ fun DreamBreakApp() {
                 autoStartOnBoot = uiState.autoStartOnBoot,
                 appEnabled = uiState.appEnabled,
                 overlayTransparencyPercent = uiState.overlayTransparencyPercent,
-                overlayBackgroundUri = uiState.overlayBackgroundUri,
+                overlayBackgroundPortraitUri = uiState.overlayBackgroundPortraitUri,
+                overlayBackgroundLandscapeUri = uiState.overlayBackgroundLandscapeUri,
                 onboardingCompleted = uiState.onboardingCompleted,
                 excludeFromRecents = uiState.excludeFromRecents,
                 persistentNotificationEnabled = uiState.persistentNotificationEnabled,
@@ -302,6 +320,12 @@ fun DreamBreakApp() {
                 persistentNotificationTitleTemplate = uiState.persistentNotificationTitleTemplate,
                 persistentNotificationContentTemplate = uiState.persistentNotificationContentTemplate,
                 qsTileCountdownAsTitle = uiState.qsTileCountdownAsTitle,
+                breakShowPostponeButton = uiState.breakShowPostponeButton,
+                breakShowTitle = uiState.breakShowTitle,
+                breakShowCountdown = uiState.breakShowCountdown,
+                breakShowExitButton = uiState.breakShowExitButton,
+                breakExitPostponeSeconds = uiState.breakExitPostponeSeconds,
+                breakOverlayAnimationDurationMs = uiState.breakOverlayAnimationDurationMs,
                 themeMode = uiState.themeMode,
             )
         )
@@ -360,7 +384,6 @@ fun DreamBreakApp() {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .safeDrawingPadding()
                     .padding(innerPadding)
             ) {
                 AnimatedContent(
@@ -392,7 +415,8 @@ fun DreamBreakApp() {
                             installedApps = installedApps,
                             autoStartOnBoot = uiState.autoStartOnBoot,
                             overlayTransparencyPercent = uiState.overlayTransparencyPercent,
-                            overlayBackgroundUri = uiState.overlayBackgroundUri,
+                            overlayBackgroundPortraitUri = uiState.overlayBackgroundPortraitUri,
+                            overlayBackgroundLandscapeUri = uiState.overlayBackgroundLandscapeUri,
                             excludeFromRecents = uiState.excludeFromRecents,
                             persistentNotificationEnabled = uiState.persistentNotificationEnabled,
                             persistentNotificationUpdateFrequencySeconds =
@@ -402,6 +426,12 @@ fun DreamBreakApp() {
                             persistentNotificationContentTemplate =
                                 uiState.persistentNotificationContentTemplate,
                             qsTileCountdownAsTitle = uiState.qsTileCountdownAsTitle,
+                            breakShowPostponeButton = uiState.breakShowPostponeButton,
+                            breakShowTitle = uiState.breakShowTitle,
+                            breakShowCountdown = uiState.breakShowCountdown,
+                            breakShowExitButton = uiState.breakShowExitButton,
+                            breakExitPostponeSeconds = uiState.breakExitPostponeSeconds,
+                            breakOverlayAnimationDurationMs = uiState.breakOverlayAnimationDurationMs,
                             themeMode = uiState.themeMode,
                             onPreferencesChange = { BreakRuntime.updatePreferences(it) },
                             onPauseInListedAppsChange = { enabled ->
@@ -426,8 +456,16 @@ fun DreamBreakApp() {
                             },
                             onAutoStartOnBootChange = { BreakRuntime.setAutoStartOnBoot(it) },
                             onOverlayTransparencyPercentChange = { BreakRuntime.setOverlayTransparencyPercent(it) },
-                            onPickOverlayImage = { overlayPicker.launch(arrayOf("image/*")) },
-                            onClearOverlayImage = { BreakRuntime.setOverlayBackgroundUri("") },
+                            onPickOverlayPortraitImage = {
+                                overlayPickerTarget = OverlayImageTarget.PORTRAIT
+                                overlayPicker.launch(arrayOf("image/*"))
+                            },
+                            onPickOverlayLandscapeImage = {
+                                overlayPickerTarget = OverlayImageTarget.LANDSCAPE
+                                overlayPicker.launch(arrayOf("image/*"))
+                            },
+                            onClearOverlayPortraitImage = { BreakRuntime.setOverlayBackgroundPortraitUri("") },
+                            onClearOverlayLandscapeImage = { BreakRuntime.setOverlayBackgroundLandscapeUri("") },
                             onExcludeFromRecentsChange = { BreakRuntime.setExcludeFromRecents(it) },
                             onThemeModeChange = { BreakRuntime.setThemeMode(it) },
                             onPersistentNotificationEnabledChange = { enabled ->
@@ -452,6 +490,24 @@ fun DreamBreakApp() {
                             onQsTileCountdownAsTitleChange = {
                                 BreakRuntime.setQsTileCountdownAsTitle(it)
                             },
+                            onBreakShowPostponeButtonChange = {
+                                BreakRuntime.setBreakShowPostponeButton(it)
+                            },
+                            onBreakShowTitleChange = {
+                                BreakRuntime.setBreakShowTitle(it)
+                            },
+                            onBreakShowCountdownChange = {
+                                BreakRuntime.setBreakShowCountdown(it)
+                            },
+                            onBreakShowExitButtonChange = {
+                                BreakRuntime.setBreakShowExitButton(it)
+                            },
+                            onBreakExitPostponeSecondsChange = {
+                                BreakRuntime.setBreakExitPostponeSeconds(it)
+                            },
+                            onBreakOverlayAnimationDurationMsChange = {
+                                BreakRuntime.setBreakOverlayAnimationDurationMs(it)
+                            },
                             onOpenPreBreakNotificationChannelSettings = {
                                 MainActivity.openNotificationChannelSettings(
                                     context,
@@ -469,6 +525,11 @@ fun DreamBreakApp() {
 private enum class AppDestinations(val labelRes: Int, val icon: ImageVector) {
     HOME(R.string.nav_home, Icons.Default.Home),
     SETTINGS(R.string.nav_settings, Icons.Default.Settings),
+}
+
+private enum class OverlayImageTarget {
+    PORTRAIT,
+    LANDSCAPE,
 }
 
 @Composable
@@ -497,7 +558,6 @@ private fun OnboardingScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .safeDrawingPadding()
                 .padding(innerPadding)
                 .padding(24.dp),
         ) {
@@ -848,21 +908,30 @@ private fun SettingsPage(
     installedApps: List<InstalledApp>,
     autoStartOnBoot: Boolean,
     overlayTransparencyPercent: Int,
-    overlayBackgroundUri: String,
+    overlayBackgroundPortraitUri: String,
+    overlayBackgroundLandscapeUri: String,
     excludeFromRecents: Boolean,
     persistentNotificationEnabled: Boolean,
     persistentNotificationUpdateFrequencySeconds: Int,
     persistentNotificationTitleTemplate: String,
     persistentNotificationContentTemplate: String,
     qsTileCountdownAsTitle: Boolean,
+    breakShowPostponeButton: Boolean,
+    breakShowTitle: Boolean,
+    breakShowCountdown: Boolean,
+    breakShowExitButton: Boolean,
+    breakExitPostponeSeconds: Int,
+    breakOverlayAnimationDurationMs: Int,
     themeMode: AppThemeMode,
     onPreferencesChange: (BreakPreferences) -> Unit,
     onPauseInListedAppsChange: (Boolean) -> Unit,
     onMonitoredAppsChange: (String) -> Unit,
     onAutoStartOnBootChange: (Boolean) -> Unit,
     onOverlayTransparencyPercentChange: (Int) -> Unit,
-    onPickOverlayImage: () -> Unit,
-    onClearOverlayImage: () -> Unit,
+    onPickOverlayPortraitImage: () -> Unit,
+    onPickOverlayLandscapeImage: () -> Unit,
+    onClearOverlayPortraitImage: () -> Unit,
+    onClearOverlayLandscapeImage: () -> Unit,
     onExcludeFromRecentsChange: (Boolean) -> Unit,
     onThemeModeChange: (AppThemeMode) -> Unit,
     onPersistentNotificationEnabledChange: (Boolean) -> Unit,
@@ -870,6 +939,12 @@ private fun SettingsPage(
     onPersistentNotificationTitleTemplateChange: (String) -> Unit,
     onPersistentNotificationContentTemplateChange: (String) -> Unit,
     onQsTileCountdownAsTitleChange: (Boolean) -> Unit,
+    onBreakShowPostponeButtonChange: (Boolean) -> Unit,
+    onBreakShowTitleChange: (Boolean) -> Unit,
+    onBreakShowCountdownChange: (Boolean) -> Unit,
+    onBreakShowExitButtonChange: (Boolean) -> Unit,
+    onBreakExitPostponeSecondsChange: (Int) -> Unit,
+    onBreakOverlayAnimationDurationMsChange: (Int) -> Unit,
     onOpenPreBreakNotificationChannelSettings: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -883,7 +958,7 @@ private fun SettingsPage(
     val previewController = remember(context.applicationContext) {
         BreakOverlayController(
             context = context.applicationContext,
-            onInterruptBreak = { overlayPreviewVisible = false },
+            onExitBreak = { _ -> overlayPreviewVisible = false },
             onPostponeBreak = { _ -> overlayPreviewVisible = false },
         )
     }
@@ -906,11 +981,18 @@ private fun SettingsPage(
 
     LaunchedEffect(
         overlayPreviewVisible,
-        overlayBackgroundUri,
+        overlayBackgroundPortraitUri,
+        overlayBackgroundLandscapeUri,
         overlayTransparencyPercent,
         preferences.bigAfter,
         preferences.bigFor,
         preferences.smallFor,
+        breakShowPostponeButton,
+        breakShowTitle,
+        breakShowCountdown,
+        breakShowExitButton,
+        breakExitPostponeSeconds,
+        breakOverlayAnimationDurationMs,
     ) {
         if (!overlayPreviewVisible) {
             previewController.release()
@@ -928,9 +1010,16 @@ private fun SettingsPage(
                 breakSecondsRemaining = previewDuration,
             ),
             appEnabled = true,
-            overlayBackgroundUri = overlayBackgroundUri,
+            overlayBackgroundPortraitUri = overlayBackgroundPortraitUri,
+            overlayBackgroundLandscapeUri = overlayBackgroundLandscapeUri,
             overlayTransparencyPercent = overlayTransparencyPercent,
             postponeOptions = preferences.postponeFor,
+            showPostponeButton = breakShowPostponeButton,
+            showTitle = breakShowTitle,
+            showCountdown = breakShowCountdown,
+            showExitButton = breakShowExitButton,
+            exitPostponeSeconds = breakExitPostponeSeconds,
+            overlayAnimationDurationMs = breakOverlayAnimationDurationMs,
             topFlashSmallText = preferences.topFlashSmallText,
             topFlashBigText = preferences.topFlashBigText,
         )
@@ -1069,6 +1158,50 @@ private fun SettingsPage(
             defaultValues = defaultPreferences.postponeFor,
             onValuesChange = { onPreferencesChange(preferences.copy(postponeFor = it)) },
         )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.settings_break_show_postpone_button), modifier = Modifier.weight(1f))
+            Switch(
+                checked = breakShowPostponeButton,
+                onCheckedChange = onBreakShowPostponeButtonChange,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.settings_break_show_title), modifier = Modifier.weight(1f))
+            Switch(
+                checked = breakShowTitle,
+                onCheckedChange = onBreakShowTitleChange,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.settings_break_show_countdown), modifier = Modifier.weight(1f))
+            Switch(
+                checked = breakShowCountdown,
+                onCheckedChange = onBreakShowCountdownChange,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.settings_break_show_exit_button), modifier = Modifier.weight(1f))
+            Switch(
+                checked = breakShowExitButton,
+                onCheckedChange = onBreakShowExitButtonChange,
+            )
+        }
+        NumberInputField(
+            label = stringResource(R.string.settings_break_exit_postpone_seconds),
+            value = breakExitPostponeSeconds,
+            minValue = 1,
+            maxValue = 3600,
+            defaultValue = 60,
+            onValueChange = onBreakExitPostponeSecondsChange,
+        )
+        NumberInputField(
+            label = stringResource(R.string.settings_break_overlay_animation_duration_ms),
+            value = breakOverlayAnimationDurationMs,
+            minValue = 0,
+            maxValue = 5000,
+            defaultValue = 300,
+            onValueChange = onBreakOverlayAnimationDurationMsChange,
+        )
 
         Text(stringResource(R.string.settings_pause), style = MaterialTheme.typography.titleLarge)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1097,22 +1230,42 @@ private fun SettingsPage(
             onValueChange = onOverlayTransparencyPercentChange,
         )
         Button(
-            onClick = onPickOverlayImage,
+            onClick = onPickOverlayPortraitImage,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(stringResource(R.string.settings_pick_overlay_image))
+            Text(stringResource(R.string.settings_pick_overlay_image_portrait))
         }
         Button(
-            onClick = onClearOverlayImage,
+            onClick = onClearOverlayPortraitImage,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(stringResource(R.string.settings_clear_overlay_image))
+            Text(stringResource(R.string.settings_clear_overlay_image_portrait))
         }
         Text(
-            text = if (overlayBackgroundUri.isBlank()) {
-                stringResource(R.string.settings_overlay_image_none)
+            text = if (overlayBackgroundPortraitUri.isBlank()) {
+                stringResource(R.string.settings_overlay_image_portrait_none)
             } else {
-                stringResource(R.string.settings_overlay_image_selected)
+                stringResource(R.string.settings_overlay_image_portrait_selected)
+            },
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Button(
+            onClick = onPickOverlayLandscapeImage,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.settings_pick_overlay_image_landscape))
+        }
+        Button(
+            onClick = onClearOverlayLandscapeImage,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.settings_clear_overlay_image_landscape))
+        }
+        Text(
+            text = if (overlayBackgroundLandscapeUri.isBlank()) {
+                stringResource(R.string.settings_overlay_image_landscape_none)
+            } else {
+                stringResource(R.string.settings_overlay_image_landscape_selected)
             },
             style = MaterialTheme.typography.bodyMedium,
         )
@@ -1443,9 +1596,6 @@ private fun RequiredTextInputField(
             onValueChange(input)
         },
         label = { Text(label) },
-        supportingText = {
-            Text(" ")
-        },
         singleLine = true,
         modifier = Modifier
             .fillMaxWidth()

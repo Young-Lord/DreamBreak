@@ -160,7 +160,8 @@ class DreamBreakTileService : TileService() {
             autoStartOnBoot = settings.autoStartOnBoot,
             appEnabled = settings.appEnabled,
             overlayTransparencyPercent = settings.overlayTransparencyPercent,
-            overlayBackgroundUri = settings.overlayBackgroundUri,
+            overlayBackgroundPortraitUri = settings.overlayBackgroundPortraitUri,
+            overlayBackgroundLandscapeUri = settings.overlayBackgroundLandscapeUri,
             onboardingCompleted = settings.onboardingCompleted,
             excludeFromRecents = settings.excludeFromRecents,
             persistentNotificationEnabled = settings.persistentNotificationEnabled,
@@ -169,6 +170,12 @@ class DreamBreakTileService : TileService() {
             persistentNotificationTitleTemplate = settings.persistentNotificationTitleTemplate,
             persistentNotificationContentTemplate = settings.persistentNotificationContentTemplate,
             qsTileCountdownAsTitle = settings.qsTileCountdownAsTitle,
+            breakShowPostponeButton = settings.breakShowPostponeButton,
+            breakShowTitle = settings.breakShowTitle,
+            breakShowCountdown = settings.breakShowCountdown,
+            breakShowExitButton = settings.breakShowExitButton,
+            breakExitPostponeSeconds = settings.breakExitPostponeSeconds,
+            breakOverlayAnimationDurationMs = settings.breakOverlayAnimationDurationMs,
             themeMode = settings.themeMode,
         )
     }

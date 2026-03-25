@@ -20,7 +20,8 @@ data class BreakUiState(
     val autoStartOnBoot: Boolean = false,
     val appEnabled: Boolean = true,
     val overlayTransparencyPercent: Int = 28,
-    val overlayBackgroundUri: String = "",
+    val overlayBackgroundPortraitUri: String = "",
+    val overlayBackgroundLandscapeUri: String = "",
     val onboardingCompleted: Boolean = false,
     val excludeFromRecents: Boolean = false,
     val persistentNotificationEnabled: Boolean = false,
@@ -28,6 +29,12 @@ data class BreakUiState(
     val persistentNotificationTitleTemplate: String = DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE,
     val persistentNotificationContentTemplate: String = DEFAULT_PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE,
     val qsTileCountdownAsTitle: Boolean = false,
+    val breakShowPostponeButton: Boolean = true,
+    val breakShowTitle: Boolean = true,
+    val breakShowCountdown: Boolean = true,
+    val breakShowExitButton: Boolean = true,
+    val breakExitPostponeSeconds: Int = DEFAULT_POSTPONE_DURATION_SECONDS,
+    val breakOverlayAnimationDurationMs: Int = 300,
     val themeMode: AppThemeMode = AppThemeMode.FOLLOW_SYSTEM,
 )
 
@@ -122,9 +129,14 @@ object BreakRuntime {
         _uiState.value = current.copy(overlayTransparencyPercent = value.coerceIn(0, 100))
     }
 
-    fun setOverlayBackgroundUri(value: String) {
+    fun setOverlayBackgroundPortraitUri(value: String) {
         val current = _uiState.value
-        _uiState.value = current.copy(overlayBackgroundUri = value)
+        _uiState.value = current.copy(overlayBackgroundPortraitUri = value)
+    }
+
+    fun setOverlayBackgroundLandscapeUri(value: String) {
+        val current = _uiState.value
+        _uiState.value = current.copy(overlayBackgroundLandscapeUri = value)
     }
 
     fun setAutoStartOnBoot(enabled: Boolean) {
@@ -172,6 +184,36 @@ object BreakRuntime {
     fun setThemeMode(mode: AppThemeMode) {
         val current = _uiState.value
         _uiState.value = current.copy(themeMode = mode)
+    }
+
+    fun setBreakShowPostponeButton(enabled: Boolean) {
+        val current = _uiState.value
+        _uiState.value = current.copy(breakShowPostponeButton = enabled)
+    }
+
+    fun setBreakExitPostponeSeconds(seconds: Int) {
+        val current = _uiState.value
+        _uiState.value = current.copy(breakExitPostponeSeconds = seconds.coerceIn(1, 3600))
+    }
+
+    fun setBreakOverlayAnimationDurationMs(durationMs: Int) {
+        val current = _uiState.value
+        _uiState.value = current.copy(breakOverlayAnimationDurationMs = durationMs.coerceIn(0, 5000))
+    }
+
+    fun setBreakShowTitle(enabled: Boolean) {
+        val current = _uiState.value
+        _uiState.value = current.copy(breakShowTitle = enabled)
+    }
+
+    fun setBreakShowCountdown(enabled: Boolean) {
+        val current = _uiState.value
+        _uiState.value = current.copy(breakShowCountdown = enabled)
+    }
+
+    fun setBreakShowExitButton(enabled: Boolean) {
+        val current = _uiState.value
+        _uiState.value = current.copy(breakShowExitButton = enabled)
     }
 
     fun requestBreakNow(bigBreak: Boolean = false) {
@@ -256,7 +298,8 @@ object BreakRuntime {
         autoStartOnBoot: Boolean,
         appEnabled: Boolean,
         overlayTransparencyPercent: Int,
-        overlayBackgroundUri: String,
+        overlayBackgroundPortraitUri: String,
+        overlayBackgroundLandscapeUri: String,
         onboardingCompleted: Boolean,
         excludeFromRecents: Boolean,
         persistentNotificationEnabled: Boolean,
@@ -264,6 +307,12 @@ object BreakRuntime {
         persistentNotificationTitleTemplate: String,
         persistentNotificationContentTemplate: String,
         qsTileCountdownAsTitle: Boolean,
+        breakShowPostponeButton: Boolean,
+        breakShowTitle: Boolean,
+        breakShowCountdown: Boolean,
+        breakShowExitButton: Boolean,
+        breakExitPostponeSeconds: Int,
+        breakOverlayAnimationDurationMs: Int,
         themeMode: AppThemeMode,
     ) {
         val current = _uiState.value
@@ -274,7 +323,8 @@ object BreakRuntime {
             autoStartOnBoot = autoStartOnBoot,
             appEnabled = appEnabled,
             overlayTransparencyPercent = overlayTransparencyPercent.coerceIn(0, 100),
-            overlayBackgroundUri = overlayBackgroundUri,
+            overlayBackgroundPortraitUri = overlayBackgroundPortraitUri,
+            overlayBackgroundLandscapeUri = overlayBackgroundLandscapeUri,
             onboardingCompleted = onboardingCompleted,
             excludeFromRecents = excludeFromRecents,
             persistentNotificationEnabled = persistentNotificationEnabled,
@@ -283,6 +333,12 @@ object BreakRuntime {
             persistentNotificationTitleTemplate = persistentNotificationTitleTemplate,
             persistentNotificationContentTemplate = persistentNotificationContentTemplate,
             qsTileCountdownAsTitle = qsTileCountdownAsTitle,
+            breakShowPostponeButton = breakShowPostponeButton,
+            breakShowTitle = breakShowTitle,
+            breakShowCountdown = breakShowCountdown,
+            breakShowExitButton = breakShowExitButton,
+            breakExitPostponeSeconds = breakExitPostponeSeconds.coerceIn(1, 3600),
+            breakOverlayAnimationDurationMs = breakOverlayAnimationDurationMs.coerceIn(0, 5000),
             themeMode = themeMode,
             state = current.state.copy(
                 secondsToNextBreak = current.state.secondsToNextBreak.coerceAtMost(preferences.smallEvery)

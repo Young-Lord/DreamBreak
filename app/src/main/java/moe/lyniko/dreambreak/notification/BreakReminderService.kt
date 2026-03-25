@@ -60,7 +60,7 @@ class BreakReminderService : Service() {
         ensureChannel()
         overlayController = BreakOverlayController(
             this,
-            onInterruptBreak = { BreakRuntime.interruptBreak() },
+            onExitBreak = { seconds -> BreakRuntime.postponeBreakForSeconds(seconds) },
             onPostponeBreak = { seconds -> BreakRuntime.postponeBreakForSeconds(seconds) },
         )
         screenLockReceiver = ScreenLockReceiver()
@@ -94,9 +94,16 @@ class BreakReminderService : Service() {
                 overlayController.render(
                     state = uiState.state,
                     appEnabled = uiState.appEnabled,
-                    overlayBackgroundUri = uiState.overlayBackgroundUri,
+                    overlayBackgroundPortraitUri = uiState.overlayBackgroundPortraitUri,
+                    overlayBackgroundLandscapeUri = uiState.overlayBackgroundLandscapeUri,
                     overlayTransparencyPercent = uiState.overlayTransparencyPercent,
                     postponeOptions = uiState.preferences.postponeFor,
+                    showPostponeButton = uiState.breakShowPostponeButton,
+                    showTitle = uiState.breakShowTitle,
+                    showCountdown = uiState.breakShowCountdown,
+                    showExitButton = uiState.breakShowExitButton,
+                    exitPostponeSeconds = uiState.breakExitPostponeSeconds,
+                    overlayAnimationDurationMs = uiState.breakOverlayAnimationDurationMs,
                     topFlashSmallText = uiState.preferences.topFlashSmallText,
                     topFlashBigText = uiState.preferences.topFlashBigText,
                 )

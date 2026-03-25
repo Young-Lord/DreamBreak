@@ -1,6 +1,7 @@
 package moe.lyniko.dreambreak.overlay
 
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.Typeface
@@ -22,6 +23,7 @@ import android.widget.TextView
 import moe.lyniko.dreambreak.R
 import moe.lyniko.dreambreak.core.BreakPhase
 import moe.lyniko.dreambreak.core.BreakState
+import moe.lyniko.dreambreak.core.DEFAULT_POSTPONE_DURATION_SECONDS
 import moe.lyniko.dreambreak.core.DEFAULT_POSTPONE_DURATIONS_SECONDS
 import moe.lyniko.dreambreak.core.DEFAULT_TOP_FLASH_BIG_TEXT
 import moe.lyniko.dreambreak.core.DEFAULT_TOP_FLASH_SMALL_TEXT
@@ -29,7 +31,7 @@ import moe.lyniko.dreambreak.core.SessionMode
 
 class BreakOverlayController(
     private val context: Context,
-    private val onInterruptBreak: () -> Unit,
+    private val onExitBreak: (Int) -> Unit,
     private val onPostponeBreak: (Int) -> Unit,
 ) {
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -44,13 +46,26 @@ class BreakOverlayController(
     private var postponeOptionsPanel: LinearLayout? = null
     private var lastBackgroundUri: String = ""
     private var currentPostponeOptions: List<Int> = DEFAULT_POSTPONE_DURATIONS_SECONDS
+    private var currentShowPostponeButton: Boolean = true
+    private var currentShowTitle: Boolean = true
+    private var currentShowCountdown: Boolean = true
+    private var currentShowExitButton: Boolean = true
+    private var currentExitPostponeSeconds: Int = DEFAULT_POSTPONE_DURATION_SECONDS
+    private var currentOverlayAnimationDurationMs: Int = 300
 
     fun render(
         state: BreakState,
         appEnabled: Boolean,
-        overlayBackgroundUri: String,
+        overlayBackgroundPortraitUri: String,
+        overlayBackgroundLandscapeUri: String,
         overlayTransparencyPercent: Int,
         postponeOptions: List<Int>,
+        showPostponeButton: Boolean,
+        showTitle: Boolean,
+        showCountdown: Boolean,
+        showExitButton: Boolean,
+        exitPostponeSeconds: Int,
+        overlayAnimationDurationMs: Int,
         topFlashSmallText: String,
         topFlashBigText: String,
     ) {
@@ -83,7 +98,19 @@ class BreakOverlayController(
         }
 
         if (showFullScreen) {
-            showFullScreenOverlay(state, overlayBackgroundUri, overlayTransparencyPercent, normalizedPostponeOptions)
+            showFullScreenOverlay(
+                state = state,
+                overlayBackgroundPortraitUri = overlayBackgroundPortraitUri,
+                overlayBackgroundLandscapeUri = overlayBackgroundLandscapeUri,
+                overlayTransparencyPercent = overlayTransparencyPercent,
+                postponeOptions = normalizedPostponeOptions,
+                showPostponeButton = showPostponeButton,
+                showTitle = showTitle,
+                showCountdown = showCountdown,
+                showExitButton = showExitButton,
+                exitPostponeSeconds = exitPostponeSeconds.coerceAtLeast(1),
+                overlayAnimationDurationMs = overlayAnimationDurationMs.coerceIn(0, 5000),
+            )
         } else {
             hideFullScreenOverlay()
         }
@@ -147,12 +174,29 @@ class BreakOverlayController(
 
     private fun showFullScreenOverlay(
         state: BreakState,
-        overlayBackgroundUri: String,
+        overlayBackgroundPortraitUri: String,
+        overlayBackgroundLandscapeUri: String,
         overlayTransparencyPercent: Int,
         postponeOptions: List<Int>,
+        showPostponeButton: Boolean,
+        showTitle: Boolean,
+        showCountdown: Boolean,
+        showExitButton: Boolean,
+        exitPostponeSeconds: Int,
+        overlayAnimationDurationMs: Int,
     ) {
-        if (fullScreenView != null && currentPostponeOptions != postponeOptions) {
-            hideFullScreenOverlay()
+        if (
+            fullScreenView != null && (
+                currentPostponeOptions != postponeOptions ||
+                    currentShowPostponeButton != showPostponeButton ||
+                    currentShowTitle != showTitle ||
+                    currentShowCountdown != showCountdown ||
+                    currentShowExitButton != showExitButton ||
+                    currentExitPostponeSeconds != exitPostponeSeconds ||
+                    currentOverlayAnimationDurationMs != overlayAnimationDurationMs
+                )
+        ) {
+            hideFullScreenOverlay(skipAnimation = true)
         }
 
         if (fullScreenView == null) {
@@ -213,7 +257,7 @@ class BreakOverlayController(
                 text = context.getString(R.string.action_exit),
                 backgroundColor = 0xFF5E4F54.toInt(),
                 onClick = {
-                    onInterruptBreak()
+                    onExitBreak(exitPostponeSeconds)
                     postponeOptionsPanel?.visibility = View.GONE
                 },
             )
@@ -230,18 +274,42 @@ class BreakOverlayController(
                 },
             )
 
-            actionRow.addView(
-                exitButton,
-                LinearLayout.LayoutParams(0, dp(44), 1f).apply {
-                    rightMargin = dp(6)
+            when {
+                showExitButton && showPostponeButton -> {
+                    actionRow.addView(
+                        exitButton,
+                        LinearLayout.LayoutParams(0, dp(44), 1f).apply {
+                            rightMargin = dp(6)
+                        }
+                    )
+                    actionRow.addView(
+                        postponeButton,
+                        LinearLayout.LayoutParams(0, dp(44), 1f).apply {
+                            leftMargin = dp(6)
+                        }
+                    )
                 }
-            )
-            actionRow.addView(
-                postponeButton,
-                LinearLayout.LayoutParams(0, dp(44), 1f).apply {
-                    leftMargin = dp(6)
+
+                showExitButton -> {
+                    actionRow.addView(
+                        exitButton,
+                        LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            dp(44),
+                        )
+                    )
                 }
-            )
+
+                showPostponeButton -> {
+                    actionRow.addView(
+                        postponeButton,
+                        LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            dp(44),
+                        )
+                    )
+                }
+            }
 
             val optionsPanel = buildPostponePanel(postponeOptions)
 
@@ -264,7 +332,9 @@ class BreakOverlayController(
                 leftMargin = dp(64)
                 rightMargin = dp(64)
             }
-            root.addView(actionRow, actionParams)
+            if (showExitButton || showPostponeButton) {
+                root.addView(actionRow, actionParams)
+            }
 
             val optionsParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -275,7 +345,9 @@ class BreakOverlayController(
                 leftMargin = dp(28)
                 rightMargin = dp(28)
             }
-            root.addView(optionsPanel, optionsParams)
+            if (showPostponeButton) {
+                root.addView(optionsPanel, optionsParams)
+            }
 
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
@@ -290,6 +362,15 @@ class BreakOverlayController(
             }
 
             windowManager.addView(root, params)
+            if (overlayAnimationDurationMs > 0) {
+                root.alpha = 0f
+                root.animate()
+                    .alpha(1f)
+                    .setDuration(overlayAnimationDurationMs.toLong())
+                    .start()
+            } else {
+                root.alpha = 1f
+            }
             fullScreenView = root
             backgroundImageView = backgroundImage
             dimLayerView = dimLayer
@@ -298,24 +379,43 @@ class BreakOverlayController(
             fullExitButton = exitButton
             postponeOptionsPanel = optionsPanel
             currentPostponeOptions = postponeOptions
+            currentShowPostponeButton = showPostponeButton
+            currentShowTitle = showTitle
+            currentShowCountdown = showCountdown
+            currentShowExitButton = showExitButton
+            currentExitPostponeSeconds = exitPostponeSeconds
+            currentOverlayAnimationDurationMs = overlayAnimationDurationMs
         }
 
-        applyOverlayBackground(overlayBackgroundUri, overlayTransparencyPercent)
+        applyOverlayBackground(
+            overlayBackgroundPortraitUri = overlayBackgroundPortraitUri,
+            overlayBackgroundLandscapeUri = overlayBackgroundLandscapeUri,
+            overlayTransparencyPercent = overlayTransparencyPercent,
+        )
 
         val breakTypeRes = if (state.isBigBreak) R.string.break_type_big else R.string.break_type_small
         fullTypeView?.text = context.getString(breakTypeRes)
         fullRemainingView?.text = formatSeconds(state.breakSecondsRemaining)
+        fullTypeView?.visibility = if (showTitle) View.VISIBLE else View.GONE
+        fullRemainingView?.visibility = if (showCountdown) View.VISIBLE else View.GONE
         fullExitButton?.isEnabled = state.phase == BreakPhase.FULL_SCREEN || state.phase == BreakPhase.POST
     }
 
-    private fun applyOverlayBackground(overlayBackgroundUri: String, overlayTransparencyPercent: Int) {
+    private fun applyOverlayBackground(
+        overlayBackgroundPortraitUri: String,
+        overlayBackgroundLandscapeUri: String,
+        overlayTransparencyPercent: Int,
+    ) {
         val imageView = backgroundImageView
         val dimLayer = dimLayerView
         if (imageView == null || dimLayer == null) {
             return
         }
 
-        val normalizedUri = overlayBackgroundUri.trim()
+        val normalizedUri = resolveBackgroundUri(
+            overlayBackgroundPortraitUri = overlayBackgroundPortraitUri,
+            overlayBackgroundLandscapeUri = overlayBackgroundLandscapeUri,
+        )
         if (normalizedUri.isBlank()) {
             imageView.visibility = View.GONE
             imageView.setImageDrawable(null)
@@ -340,6 +440,21 @@ class BreakOverlayController(
             .coerceIn(0f, 1f)
         dimLayer.setBackgroundColor(Color.BLACK)
         dimLayer.alpha = dimAlpha
+    }
+
+    private fun resolveBackgroundUri(
+        overlayBackgroundPortraitUri: String,
+        overlayBackgroundLandscapeUri: String,
+    ): String {
+        val portraitUri = overlayBackgroundPortraitUri.trim()
+        val landscapeUri = overlayBackgroundLandscapeUri.trim()
+        val isLandscape =
+            context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        return if (isLandscape) {
+            landscapeUri.ifBlank { portraitUri }
+        } else {
+            portraitUri.ifBlank { landscapeUri }
+        }
     }
 
     private fun buildPostponePanel(options: List<Int>): LinearLayout {
@@ -452,9 +567,8 @@ class BreakOverlayController(
         }
     }
 
-    private fun hideFullScreenOverlay() {
+    private fun hideFullScreenOverlay(skipAnimation: Boolean = false) {
         val view = fullScreenView ?: return
-        runCatching { windowManager.removeView(view) }
         fullScreenView = null
         backgroundImageView = null
         dimLayerView = null
@@ -463,6 +577,25 @@ class BreakOverlayController(
         fullExitButton = null
         postponeOptionsPanel = null
         lastBackgroundUri = ""
+        currentShowPostponeButton = true
+        currentShowTitle = true
+        currentShowCountdown = true
+        currentShowExitButton = true
+        currentExitPostponeSeconds = DEFAULT_POSTPONE_DURATION_SECONDS
+        val animationDurationMs = currentOverlayAnimationDurationMs
+        currentOverlayAnimationDurationMs = 300
+        if (skipAnimation || animationDurationMs <= 0) {
+            runCatching { windowManager.removeView(view) }
+            return
+        }
+        view.animate().cancel()
+        view.animate()
+            .alpha(0f)
+            .setDuration(animationDurationMs.toLong())
+            .withEndAction {
+                runCatching { windowManager.removeView(view) }
+            }
+            .start()
     }
 
     private fun normalizePostponeOptions(options: List<Int>): List<Int> {

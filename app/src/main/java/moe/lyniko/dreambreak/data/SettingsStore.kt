@@ -9,6 +9,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import moe.lyniko.dreambreak.core.BreakPreferences
+import moe.lyniko.dreambreak.core.DEFAULT_POSTPONE_DURATION_SECONDS
 import moe.lyniko.dreambreak.core.DEFAULT_PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE
 import moe.lyniko.dreambreak.core.DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE
 import moe.lyniko.dreambreak.core.formatPostponeDurations
@@ -23,7 +24,8 @@ data class AppSettings(
     val autoStartOnBoot: Boolean = false,
     val appEnabled: Boolean = true,
     val overlayTransparencyPercent: Int = 28,
-    val overlayBackgroundUri: String = "",
+    val overlayBackgroundPortraitUri: String = "",
+    val overlayBackgroundLandscapeUri: String = "",
     val onboardingCompleted: Boolean = false,
     val excludeFromRecents: Boolean = false,
     val persistentNotificationEnabled: Boolean = false,
@@ -31,6 +33,12 @@ data class AppSettings(
     val persistentNotificationTitleTemplate: String = DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE,
     val persistentNotificationContentTemplate: String = DEFAULT_PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE,
     val qsTileCountdownAsTitle: Boolean = false,
+    val breakShowPostponeButton: Boolean = true,
+    val breakShowTitle: Boolean = true,
+    val breakShowCountdown: Boolean = true,
+    val breakShowExitButton: Boolean = true,
+    val breakExitPostponeSeconds: Int = DEFAULT_POSTPONE_DURATION_SECONDS,
+    val breakOverlayAnimationDurationMs: Int = 300,
     val themeMode: AppThemeMode = AppThemeMode.FOLLOW_SYSTEM,
 )
 
@@ -64,6 +72,7 @@ class SettingsStore(private val context: Context) {
                 fallback = defaultPreferences.postponeFor,
             ),
         )
+        val legacyOverlayBackgroundUri = prefs[Keys.OVERLAY_BACKGROUND_URI] ?: ""
         AppSettings(
             preferences = preferences,
             pauseInListedApps = prefs[Keys.PAUSE_IN_LISTED_APPS] ?: false,
@@ -71,7 +80,10 @@ class SettingsStore(private val context: Context) {
             autoStartOnBoot = prefs[Keys.AUTO_START_ON_BOOT] ?: false,
             appEnabled = prefs[Keys.APP_ENABLED] ?: true,
             overlayTransparencyPercent = (prefs[Keys.OVERLAY_TRANSPARENCY_PERCENT] ?: 28).coerceIn(0, 100),
-            overlayBackgroundUri = prefs[Keys.OVERLAY_BACKGROUND_URI] ?: "",
+            overlayBackgroundPortraitUri =
+                prefs[Keys.OVERLAY_BACKGROUND_PORTRAIT_URI] ?: legacyOverlayBackgroundUri,
+            overlayBackgroundLandscapeUri =
+                prefs[Keys.OVERLAY_BACKGROUND_LANDSCAPE_URI] ?: legacyOverlayBackgroundUri,
             onboardingCompleted = prefs[Keys.ONBOARDING_COMPLETED] ?: false,
             excludeFromRecents = prefs[Keys.EXCLUDE_FROM_RECENTS] ?: false,
             persistentNotificationEnabled = prefs[Keys.PERSISTENT_NOTIFICATION_ENABLED] ?: false,
@@ -84,6 +96,14 @@ class SettingsStore(private val context: Context) {
                 prefs[Keys.PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE]
                     ?: DEFAULT_PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE,
             qsTileCountdownAsTitle = prefs[Keys.QS_TILE_COUNTDOWN_AS_TITLE] ?: false,
+            breakShowPostponeButton = prefs[Keys.BREAK_SHOW_POSTPONE_BUTTON] ?: true,
+            breakShowTitle = prefs[Keys.BREAK_SHOW_TITLE] ?: true,
+            breakShowCountdown = prefs[Keys.BREAK_SHOW_COUNTDOWN] ?: true,
+            breakShowExitButton = prefs[Keys.BREAK_SHOW_EXIT_BUTTON] ?: true,
+            breakExitPostponeSeconds =
+                (prefs[Keys.BREAK_EXIT_POSTPONE_SECONDS] ?: DEFAULT_POSTPONE_DURATION_SECONDS).coerceIn(1, 3600),
+            breakOverlayAnimationDurationMs =
+                (prefs[Keys.BREAK_OVERLAY_ANIMATION_DURATION_MS] ?: 300).coerceIn(0, 5000),
             themeMode = AppThemeMode.fromStorage(prefs[Keys.THEME_MODE]),
         )
     }
@@ -107,11 +127,11 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.PRE_BREAK_NOTIFICATION_SMALL_TITLE] =
                 settings.preferences.preBreakNotificationSmallTitle.ifBlank { defaultPreferences.preBreakNotificationSmallTitle }
             prefs[Keys.PRE_BREAK_NOTIFICATION_SMALL_CONTENT] =
-                settings.preferences.preBreakNotificationSmallContent.ifBlank { defaultPreferences.preBreakNotificationSmallContent }
+                settings.preferences.preBreakNotificationSmallContent
             prefs[Keys.PRE_BREAK_NOTIFICATION_BIG_TITLE] =
                 settings.preferences.preBreakNotificationBigTitle.ifBlank { defaultPreferences.preBreakNotificationBigTitle }
             prefs[Keys.PRE_BREAK_NOTIFICATION_BIG_CONTENT] =
-                settings.preferences.preBreakNotificationBigContent.ifBlank { defaultPreferences.preBreakNotificationBigContent }
+                settings.preferences.preBreakNotificationBigContent
             prefs[Keys.POSTPONE_FOR] = formatPostponeDurations(settings.preferences.postponeFor)
             prefs.remove(Keys.POSTPONE_FOR_LEGACY)
             prefs.remove(Keys.RESET_INTERVAL_AFTER_PAUSE)
@@ -121,7 +141,9 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.AUTO_START_ON_BOOT] = settings.autoStartOnBoot
             prefs[Keys.APP_ENABLED] = settings.appEnabled
             prefs[Keys.OVERLAY_TRANSPARENCY_PERCENT] = settings.overlayTransparencyPercent.coerceIn(0, 100)
-            prefs[Keys.OVERLAY_BACKGROUND_URI] = settings.overlayBackgroundUri
+            prefs[Keys.OVERLAY_BACKGROUND_PORTRAIT_URI] = settings.overlayBackgroundPortraitUri
+            prefs[Keys.OVERLAY_BACKGROUND_LANDSCAPE_URI] = settings.overlayBackgroundLandscapeUri
+            prefs[Keys.OVERLAY_BACKGROUND_URI] = settings.overlayBackgroundPortraitUri
             prefs[Keys.ONBOARDING_COMPLETED] = settings.onboardingCompleted
             prefs[Keys.EXCLUDE_FROM_RECENTS] = settings.excludeFromRecents
             prefs[Keys.PERSISTENT_NOTIFICATION_ENABLED] = settings.persistentNotificationEnabled
@@ -133,6 +155,13 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE] =
                 settings.persistentNotificationContentTemplate.trim()
             prefs[Keys.QS_TILE_COUNTDOWN_AS_TITLE] = settings.qsTileCountdownAsTitle
+            prefs[Keys.BREAK_SHOW_POSTPONE_BUTTON] = settings.breakShowPostponeButton
+            prefs[Keys.BREAK_SHOW_TITLE] = settings.breakShowTitle
+            prefs[Keys.BREAK_SHOW_COUNTDOWN] = settings.breakShowCountdown
+            prefs[Keys.BREAK_SHOW_EXIT_BUTTON] = settings.breakShowExitButton
+            prefs[Keys.BREAK_EXIT_POSTPONE_SECONDS] = settings.breakExitPostponeSeconds.coerceIn(1, 3600)
+            prefs[Keys.BREAK_OVERLAY_ANIMATION_DURATION_MS] =
+                settings.breakOverlayAnimationDurationMs.coerceIn(0, 5000)
             prefs[Keys.THEME_MODE] = settings.themeMode.storageValue
         }
     }
@@ -162,6 +191,8 @@ class SettingsStore(private val context: Context) {
         val APP_ENABLED = booleanPreferencesKey("app_enabled")
         val OVERLAY_TRANSPARENCY_PERCENT = intPreferencesKey("overlay_transparency_percent")
         val OVERLAY_BACKGROUND_URI = stringPreferencesKey("overlay_background_uri")
+        val OVERLAY_BACKGROUND_PORTRAIT_URI = stringPreferencesKey("overlay_background_portrait_uri")
+        val OVERLAY_BACKGROUND_LANDSCAPE_URI = stringPreferencesKey("overlay_background_landscape_uri")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
         val EXCLUDE_FROM_RECENTS = booleanPreferencesKey("exclude_from_recents")
         val PERSISTENT_NOTIFICATION_ENABLED = booleanPreferencesKey("persistent_notification_enabled")
@@ -172,6 +203,12 @@ class SettingsStore(private val context: Context) {
         val PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE =
             stringPreferencesKey("persistent_notification_content_template")
         val QS_TILE_COUNTDOWN_AS_TITLE = booleanPreferencesKey("qs_tile_countdown_as_title")
+        val BREAK_SHOW_POSTPONE_BUTTON = booleanPreferencesKey("break_show_postpone_button")
+        val BREAK_SHOW_TITLE = booleanPreferencesKey("break_show_title")
+        val BREAK_SHOW_COUNTDOWN = booleanPreferencesKey("break_show_countdown")
+        val BREAK_SHOW_EXIT_BUTTON = booleanPreferencesKey("break_show_exit_button")
+        val BREAK_EXIT_POSTPONE_SECONDS = intPreferencesKey("break_exit_postpone_seconds")
+        val BREAK_OVERLAY_ANIMATION_DURATION_MS = intPreferencesKey("break_overlay_animation_duration_ms")
         val THEME_MODE = intPreferencesKey("theme_mode")
     }
 }
