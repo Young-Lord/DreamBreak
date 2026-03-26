@@ -47,7 +47,8 @@ class BootCompletedReceiver : BroadcastReceiver() {
                     breakShowCountdown = settings.breakShowCountdown,
                     breakShowExitButton = settings.breakShowExitButton,
                     breakExitPostponeSeconds = settings.breakExitPostponeSeconds,
-                    breakOverlayAnimationDurationMs = settings.breakOverlayAnimationDurationMs,
+                    breakOverlayFadeInDurationMs = settings.breakOverlayFadeInDurationMs,
+                    breakOverlayFadeOutDurationMs = settings.breakOverlayFadeOutDurationMs,
                     themeMode = settings.themeMode,
                 )
                 if (settings.autoStartOnBoot && settings.appEnabled) {

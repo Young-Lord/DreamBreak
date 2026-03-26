@@ -103,7 +103,8 @@ class BreakReminderService : Service() {
                     showCountdown = uiState.breakShowCountdown,
                     showExitButton = uiState.breakShowExitButton,
                     exitPostponeSeconds = uiState.breakExitPostponeSeconds,
-                    overlayAnimationDurationMs = uiState.breakOverlayAnimationDurationMs,
+                    overlayFadeInDurationMs = uiState.breakOverlayFadeInDurationMs,
+                    overlayFadeOutDurationMs = uiState.breakOverlayFadeOutDurationMs,
                     topFlashSmallText = uiState.preferences.topFlashSmallText,
                     topFlashBigText = uiState.preferences.topFlashBigText,
                 )

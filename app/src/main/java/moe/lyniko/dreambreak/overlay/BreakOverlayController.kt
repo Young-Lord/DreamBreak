@@ -51,7 +51,8 @@ class BreakOverlayController(
     private var currentShowCountdown: Boolean = true
     private var currentShowExitButton: Boolean = true
     private var currentExitPostponeSeconds: Int = DEFAULT_POSTPONE_DURATION_SECONDS
-    private var currentOverlayAnimationDurationMs: Int = 300
+    private var currentOverlayFadeInDurationMs: Int = 300
+    private var currentOverlayFadeOutDurationMs: Int = 300
 
     fun render(
         state: BreakState,
@@ -65,7 +66,8 @@ class BreakOverlayController(
         showCountdown: Boolean,
         showExitButton: Boolean,
         exitPostponeSeconds: Int,
-        overlayAnimationDurationMs: Int,
+        overlayFadeInDurationMs: Int,
+        overlayFadeOutDurationMs: Int,
         topFlashSmallText: String,
         topFlashBigText: String,
     ) {
@@ -109,7 +111,8 @@ class BreakOverlayController(
                 showCountdown = showCountdown,
                 showExitButton = showExitButton,
                 exitPostponeSeconds = exitPostponeSeconds.coerceAtLeast(1),
-                overlayAnimationDurationMs = overlayAnimationDurationMs.coerceIn(0, 5000),
+                overlayFadeInDurationMs = overlayFadeInDurationMs.coerceIn(0, 5000),
+                overlayFadeOutDurationMs = overlayFadeOutDurationMs.coerceIn(0, 5000),
             )
         } else {
             hideFullScreenOverlay()
@@ -183,7 +186,8 @@ class BreakOverlayController(
         showCountdown: Boolean,
         showExitButton: Boolean,
         exitPostponeSeconds: Int,
-        overlayAnimationDurationMs: Int,
+        overlayFadeInDurationMs: Int,
+        overlayFadeOutDurationMs: Int,
     ) {
         if (
             fullScreenView != null && (
@@ -193,7 +197,8 @@ class BreakOverlayController(
                     currentShowCountdown != showCountdown ||
                     currentShowExitButton != showExitButton ||
                     currentExitPostponeSeconds != exitPostponeSeconds ||
-                    currentOverlayAnimationDurationMs != overlayAnimationDurationMs
+                    currentOverlayFadeInDurationMs != overlayFadeInDurationMs ||
+                    currentOverlayFadeOutDurationMs != overlayFadeOutDurationMs
                 )
         ) {
             hideFullScreenOverlay(skipAnimation = true)
@@ -362,11 +367,11 @@ class BreakOverlayController(
             }
 
             windowManager.addView(root, params)
-            if (overlayAnimationDurationMs > 0) {
+            if (overlayFadeInDurationMs > 0) {
                 root.alpha = 0f
                 root.animate()
                     .alpha(1f)
-                    .setDuration(overlayAnimationDurationMs.toLong())
+                    .setDuration(overlayFadeInDurationMs.toLong())
                     .start()
             } else {
                 root.alpha = 1f
@@ -384,7 +389,8 @@ class BreakOverlayController(
             currentShowCountdown = showCountdown
             currentShowExitButton = showExitButton
             currentExitPostponeSeconds = exitPostponeSeconds
-            currentOverlayAnimationDurationMs = overlayAnimationDurationMs
+            currentOverlayFadeInDurationMs = overlayFadeInDurationMs
+            currentOverlayFadeOutDurationMs = overlayFadeOutDurationMs
         }
 
         applyOverlayBackground(
@@ -582,16 +588,17 @@ class BreakOverlayController(
         currentShowCountdown = true
         currentShowExitButton = true
         currentExitPostponeSeconds = DEFAULT_POSTPONE_DURATION_SECONDS
-        val animationDurationMs = currentOverlayAnimationDurationMs
-        currentOverlayAnimationDurationMs = 300
-        if (skipAnimation || animationDurationMs <= 0) {
+        val fadeOutDurationMs = currentOverlayFadeOutDurationMs
+        currentOverlayFadeInDurationMs = 300
+        currentOverlayFadeOutDurationMs = 300
+        if (skipAnimation || fadeOutDurationMs <= 0) {
             runCatching { windowManager.removeView(view) }
             return
         }
         view.animate().cancel()
         view.animate()
             .alpha(0f)
-            .setDuration(animationDurationMs.toLong())
+            .setDuration(fadeOutDurationMs.toLong())
             .withEndAction {
                 runCatching { windowManager.removeView(view) }
             }

@@ -175,7 +175,8 @@ class DreamBreakTileService : TileService() {
             breakShowCountdown = settings.breakShowCountdown,
             breakShowExitButton = settings.breakShowExitButton,
             breakExitPostponeSeconds = settings.breakExitPostponeSeconds,
-            breakOverlayAnimationDurationMs = settings.breakOverlayAnimationDurationMs,
+            breakOverlayFadeInDurationMs = settings.breakOverlayFadeInDurationMs,
+            breakOverlayFadeOutDurationMs = settings.breakOverlayFadeOutDurationMs,
             themeMode = settings.themeMode,
         )
     }

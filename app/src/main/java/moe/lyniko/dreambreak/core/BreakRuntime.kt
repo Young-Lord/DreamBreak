@@ -34,7 +34,8 @@ data class BreakUiState(
     val breakShowCountdown: Boolean = true,
     val breakShowExitButton: Boolean = true,
     val breakExitPostponeSeconds: Int = DEFAULT_POSTPONE_DURATION_SECONDS,
-    val breakOverlayAnimationDurationMs: Int = 300,
+    val breakOverlayFadeInDurationMs: Int = 300,
+    val breakOverlayFadeOutDurationMs: Int = 300,
     val themeMode: AppThemeMode = AppThemeMode.FOLLOW_SYSTEM,
 )
 
@@ -196,9 +197,14 @@ object BreakRuntime {
         _uiState.value = current.copy(breakExitPostponeSeconds = seconds.coerceIn(1, 3600))
     }
 
-    fun setBreakOverlayAnimationDurationMs(durationMs: Int) {
+    fun setBreakOverlayFadeInDurationMs(durationMs: Int) {
         val current = _uiState.value
-        _uiState.value = current.copy(breakOverlayAnimationDurationMs = durationMs.coerceIn(0, 5000))
+        _uiState.value = current.copy(breakOverlayFadeInDurationMs = durationMs.coerceIn(0, 5000))
+    }
+
+    fun setBreakOverlayFadeOutDurationMs(durationMs: Int) {
+        val current = _uiState.value
+        _uiState.value = current.copy(breakOverlayFadeOutDurationMs = durationMs.coerceIn(0, 5000))
     }
 
     fun setBreakShowTitle(enabled: Boolean) {
@@ -312,7 +318,8 @@ object BreakRuntime {
         breakShowCountdown: Boolean,
         breakShowExitButton: Boolean,
         breakExitPostponeSeconds: Int,
-        breakOverlayAnimationDurationMs: Int,
+        breakOverlayFadeInDurationMs: Int,
+        breakOverlayFadeOutDurationMs: Int,
         themeMode: AppThemeMode,
     ) {
         val current = _uiState.value
@@ -338,7 +345,8 @@ object BreakRuntime {
             breakShowCountdown = breakShowCountdown,
             breakShowExitButton = breakShowExitButton,
             breakExitPostponeSeconds = breakExitPostponeSeconds.coerceIn(1, 3600),
-            breakOverlayAnimationDurationMs = breakOverlayAnimationDurationMs.coerceIn(0, 5000),
+            breakOverlayFadeInDurationMs = breakOverlayFadeInDurationMs.coerceIn(0, 5000),
+            breakOverlayFadeOutDurationMs = breakOverlayFadeOutDurationMs.coerceIn(0, 5000),
             themeMode = themeMode,
             state = current.state.copy(
                 secondsToNextBreak = current.state.secondsToNextBreak.coerceAtMost(preferences.smallEvery)

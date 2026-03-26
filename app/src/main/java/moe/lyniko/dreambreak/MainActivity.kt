@@ -263,7 +263,8 @@ fun DreamBreakApp() {
                 breakShowCountdown = settings.breakShowCountdown,
                 breakShowExitButton = settings.breakShowExitButton,
                 breakExitPostponeSeconds = settings.breakExitPostponeSeconds,
-                breakOverlayAnimationDurationMs = settings.breakOverlayAnimationDurationMs,
+                breakOverlayFadeInDurationMs = settings.breakOverlayFadeInDurationMs,
+                breakOverlayFadeOutDurationMs = settings.breakOverlayFadeOutDurationMs,
                 themeMode = settings.themeMode,
             )
             settingsLoaded = true
@@ -295,7 +296,8 @@ fun DreamBreakApp() {
         uiState.breakShowCountdown,
         uiState.breakShowExitButton,
         uiState.breakExitPostponeSeconds,
-        uiState.breakOverlayAnimationDurationMs,
+        uiState.breakOverlayFadeInDurationMs,
+        uiState.breakOverlayFadeOutDurationMs,
         uiState.themeMode,
         settingsLoaded,
     ) {
@@ -325,7 +327,8 @@ fun DreamBreakApp() {
                 breakShowCountdown = uiState.breakShowCountdown,
                 breakShowExitButton = uiState.breakShowExitButton,
                 breakExitPostponeSeconds = uiState.breakExitPostponeSeconds,
-                breakOverlayAnimationDurationMs = uiState.breakOverlayAnimationDurationMs,
+                breakOverlayFadeInDurationMs = uiState.breakOverlayFadeInDurationMs,
+                breakOverlayFadeOutDurationMs = uiState.breakOverlayFadeOutDurationMs,
                 themeMode = uiState.themeMode,
             )
         )
@@ -431,7 +434,8 @@ fun DreamBreakApp() {
                             breakShowCountdown = uiState.breakShowCountdown,
                             breakShowExitButton = uiState.breakShowExitButton,
                             breakExitPostponeSeconds = uiState.breakExitPostponeSeconds,
-                            breakOverlayAnimationDurationMs = uiState.breakOverlayAnimationDurationMs,
+                            breakOverlayFadeInDurationMs = uiState.breakOverlayFadeInDurationMs,
+                            breakOverlayFadeOutDurationMs = uiState.breakOverlayFadeOutDurationMs,
                             themeMode = uiState.themeMode,
                             onPreferencesChange = { BreakRuntime.updatePreferences(it) },
                             onPauseInListedAppsChange = { enabled ->
@@ -505,8 +509,11 @@ fun DreamBreakApp() {
                             onBreakExitPostponeSecondsChange = {
                                 BreakRuntime.setBreakExitPostponeSeconds(it)
                             },
-                            onBreakOverlayAnimationDurationMsChange = {
-                                BreakRuntime.setBreakOverlayAnimationDurationMs(it)
+                            onBreakOverlayFadeInDurationMsChange = {
+                                BreakRuntime.setBreakOverlayFadeInDurationMs(it)
+                            },
+                            onBreakOverlayFadeOutDurationMsChange = {
+                                BreakRuntime.setBreakOverlayFadeOutDurationMs(it)
                             },
                             onOpenPreBreakNotificationChannelSettings = {
                                 MainActivity.openNotificationChannelSettings(
@@ -921,7 +928,8 @@ private fun SettingsPage(
     breakShowCountdown: Boolean,
     breakShowExitButton: Boolean,
     breakExitPostponeSeconds: Int,
-    breakOverlayAnimationDurationMs: Int,
+    breakOverlayFadeInDurationMs: Int,
+    breakOverlayFadeOutDurationMs: Int,
     themeMode: AppThemeMode,
     onPreferencesChange: (BreakPreferences) -> Unit,
     onPauseInListedAppsChange: (Boolean) -> Unit,
@@ -944,7 +952,8 @@ private fun SettingsPage(
     onBreakShowCountdownChange: (Boolean) -> Unit,
     onBreakShowExitButtonChange: (Boolean) -> Unit,
     onBreakExitPostponeSecondsChange: (Int) -> Unit,
-    onBreakOverlayAnimationDurationMsChange: (Int) -> Unit,
+    onBreakOverlayFadeInDurationMsChange: (Int) -> Unit,
+    onBreakOverlayFadeOutDurationMsChange: (Int) -> Unit,
     onOpenPreBreakNotificationChannelSettings: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -992,7 +1001,8 @@ private fun SettingsPage(
         breakShowCountdown,
         breakShowExitButton,
         breakExitPostponeSeconds,
-        breakOverlayAnimationDurationMs,
+        breakOverlayFadeInDurationMs,
+        breakOverlayFadeOutDurationMs,
     ) {
         if (!overlayPreviewVisible) {
             previewController.release()
@@ -1019,7 +1029,8 @@ private fun SettingsPage(
             showCountdown = breakShowCountdown,
             showExitButton = breakShowExitButton,
             exitPostponeSeconds = breakExitPostponeSeconds,
-            overlayAnimationDurationMs = breakOverlayAnimationDurationMs,
+            overlayFadeInDurationMs = breakOverlayFadeInDurationMs,
+            overlayFadeOutDurationMs = breakOverlayFadeOutDurationMs,
             topFlashSmallText = preferences.topFlashSmallText,
             topFlashBigText = preferences.topFlashBigText,
         )
@@ -1195,12 +1206,20 @@ private fun SettingsPage(
             onValueChange = onBreakExitPostponeSecondsChange,
         )
         NumberInputField(
-            label = stringResource(R.string.settings_break_overlay_animation_duration_ms),
-            value = breakOverlayAnimationDurationMs,
+            label = stringResource(R.string.settings_break_overlay_fade_in_duration_ms),
+            value = breakOverlayFadeInDurationMs,
             minValue = 0,
             maxValue = 5000,
             defaultValue = 300,
-            onValueChange = onBreakOverlayAnimationDurationMsChange,
+            onValueChange = onBreakOverlayFadeInDurationMsChange,
+        )
+        NumberInputField(
+            label = stringResource(R.string.settings_break_overlay_fade_out_duration_ms),
+            value = breakOverlayFadeOutDurationMs,
+            minValue = 0,
+            maxValue = 5000,
+            defaultValue = 300,
+            onValueChange = onBreakOverlayFadeOutDurationMsChange,
         )
 
         Text(stringResource(R.string.settings_pause), style = MaterialTheme.typography.titleLarge)

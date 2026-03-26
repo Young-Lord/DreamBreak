@@ -38,7 +38,8 @@ data class AppSettings(
     val breakShowCountdown: Boolean = true,
     val breakShowExitButton: Boolean = true,
     val breakExitPostponeSeconds: Int = DEFAULT_POSTPONE_DURATION_SECONDS,
-    val breakOverlayAnimationDurationMs: Int = 300,
+    val breakOverlayFadeInDurationMs: Int = 300,
+    val breakOverlayFadeOutDurationMs: Int = 300,
     val themeMode: AppThemeMode = AppThemeMode.FOLLOW_SYSTEM,
 )
 
@@ -73,6 +74,8 @@ class SettingsStore(private val context: Context) {
             ),
         )
         val legacyOverlayBackgroundUri = prefs[Keys.OVERLAY_BACKGROUND_URI] ?: ""
+        val legacyOverlayAnimationDurationMs =
+            (prefs[Keys.BREAK_OVERLAY_ANIMATION_DURATION_MS] ?: 300).coerceIn(0, 5000)
         AppSettings(
             preferences = preferences,
             pauseInListedApps = prefs[Keys.PAUSE_IN_LISTED_APPS] ?: false,
@@ -102,8 +105,12 @@ class SettingsStore(private val context: Context) {
             breakShowExitButton = prefs[Keys.BREAK_SHOW_EXIT_BUTTON] ?: true,
             breakExitPostponeSeconds =
                 (prefs[Keys.BREAK_EXIT_POSTPONE_SECONDS] ?: DEFAULT_POSTPONE_DURATION_SECONDS).coerceIn(1, 3600),
-            breakOverlayAnimationDurationMs =
-                (prefs[Keys.BREAK_OVERLAY_ANIMATION_DURATION_MS] ?: 300).coerceIn(0, 5000),
+            breakOverlayFadeInDurationMs =
+                (prefs[Keys.BREAK_OVERLAY_FADE_IN_DURATION_MS] ?: legacyOverlayAnimationDurationMs)
+                    .coerceIn(0, 5000),
+            breakOverlayFadeOutDurationMs =
+                (prefs[Keys.BREAK_OVERLAY_FADE_OUT_DURATION_MS] ?: legacyOverlayAnimationDurationMs)
+                    .coerceIn(0, 5000),
             themeMode = AppThemeMode.fromStorage(prefs[Keys.THEME_MODE]),
         )
     }
@@ -160,8 +167,12 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.BREAK_SHOW_COUNTDOWN] = settings.breakShowCountdown
             prefs[Keys.BREAK_SHOW_EXIT_BUTTON] = settings.breakShowExitButton
             prefs[Keys.BREAK_EXIT_POSTPONE_SECONDS] = settings.breakExitPostponeSeconds.coerceIn(1, 3600)
+            prefs[Keys.BREAK_OVERLAY_FADE_IN_DURATION_MS] =
+                settings.breakOverlayFadeInDurationMs.coerceIn(0, 5000)
+            prefs[Keys.BREAK_OVERLAY_FADE_OUT_DURATION_MS] =
+                settings.breakOverlayFadeOutDurationMs.coerceIn(0, 5000)
             prefs[Keys.BREAK_OVERLAY_ANIMATION_DURATION_MS] =
-                settings.breakOverlayAnimationDurationMs.coerceIn(0, 5000)
+                settings.breakOverlayFadeInDurationMs.coerceIn(0, 5000)
             prefs[Keys.THEME_MODE] = settings.themeMode.storageValue
         }
     }
@@ -208,6 +219,8 @@ class SettingsStore(private val context: Context) {
         val BREAK_SHOW_COUNTDOWN = booleanPreferencesKey("break_show_countdown")
         val BREAK_SHOW_EXIT_BUTTON = booleanPreferencesKey("break_show_exit_button")
         val BREAK_EXIT_POSTPONE_SECONDS = intPreferencesKey("break_exit_postpone_seconds")
+        val BREAK_OVERLAY_FADE_IN_DURATION_MS = intPreferencesKey("break_overlay_fade_in_duration_ms")
+        val BREAK_OVERLAY_FADE_OUT_DURATION_MS = intPreferencesKey("break_overlay_fade_out_duration_ms")
         val BREAK_OVERLAY_ANIMATION_DURATION_MS = intPreferencesKey("break_overlay_animation_duration_ms")
         val THEME_MODE = intPreferencesKey("theme_mode")
     }

@@ -72,7 +72,8 @@
     <string name="settings_break_show_countdown">Show countdown in break page</string>
     <string name="settings_break_show_exit_button">Show exit button in break page</string>
     <string name="settings_break_exit_postpone_seconds">Exit postpone duration (sec)</string>
-    <string name="settings_break_overlay_animation_duration_ms">Overlay fade animation (ms, 0 disables)</string>
+    <string name="settings_break_overlay_fade_in_duration_ms">Overlay fade-in animation (ms, 0 disables)</string>
+    <string name="settings_break_overlay_fade_out_duration_ms">Overlay fade-out animation (ms, 0 disables)</string>
     <string name="settings_pause_selected_apps">Pause timer in selected apps</string>
     <string name="settings_show_submenu">Show sub menu</string>
     <string name="settings_open_app_subpage">Open app subpage</string>
