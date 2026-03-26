@@ -17,7 +17,11 @@ import moe.lyniko.dreambreak.notification.BreakReminderService
 class BootCompletedReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         val action = intent?.action ?: return
-        if (action != Intent.ACTION_BOOT_COMPLETED && action != ACTION_QUICK_BOOT_POWER_ON) {
+        if (
+            action != Intent.ACTION_BOOT_COMPLETED &&
+            action != ACTION_QUICK_BOOT_POWER_ON &&
+            action != Intent.ACTION_MY_PACKAGE_REPLACED
+        ) {
             return
         }
 
@@ -51,13 +55,23 @@ class BootCompletedReceiver : BroadcastReceiver() {
                     breakOverlayFadeOutDurationMs = settings.breakOverlayFadeOutDurationMs,
                     themeMode = settings.themeMode,
                 )
-                if (settings.autoStartOnBoot && settings.appEnabled) {
+                val shouldStartRuntime = when (action) {
+                    Intent.ACTION_MY_PACKAGE_REPLACED -> settings.appEnabled
+                    else -> settings.autoStartOnBoot && settings.appEnabled
+                }
+
+                if (shouldStartRuntime) {
                     BreakRuntime.start()
                     AppPauseMonitor.start(appContext)
                 }
+
+                val shouldStartService = when (action) {
+                    Intent.ACTION_MY_PACKAGE_REPLACED -> settings.appEnabled
+                    else -> settings.autoStartOnBoot && settings.appEnabled
+                }
+
                 if (
-                    settings.autoStartOnBoot &&
-                    settings.appEnabled &&
+                    shouldStartService &&
                     settings.persistentNotificationEnabled &&
                     MainActivity.hasNotificationPermission(appContext)
                 ) {

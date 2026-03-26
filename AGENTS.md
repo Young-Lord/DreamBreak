@@ -2,6 +2,6 @@
 
 ```
 JAVA_HOME=/usr/lib/jvm/java-17-openjdk ./gradlew :app:assembleDebug
-adb connect 192.168.31.104
+zsh -i -c "adb kde"
 adb install <build apk path>
 ```
