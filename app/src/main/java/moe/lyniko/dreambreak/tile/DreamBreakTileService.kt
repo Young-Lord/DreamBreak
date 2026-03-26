@@ -9,8 +9,10 @@ import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import moe.lyniko.dreambreak.MainActivity
 import moe.lyniko.dreambreak.R
@@ -31,6 +33,7 @@ class DreamBreakTileService : TileService() {
     private var initializationJob: Job? = null
     private var settingsObserverJob: Job? = null
     private var uiObserverJob: Job? = null
+    private var tileRefreshJob: Job? = null
 
     override fun onTileAdded() {
         super.onTileAdded()
@@ -111,6 +114,7 @@ class DreamBreakTileService : TileService() {
             )
             observeSettings()
             observeUiState()
+            startTileRefreshJob()
         }
     }
 
@@ -121,6 +125,8 @@ class DreamBreakTileService : TileService() {
         settingsObserverJob = null
         uiObserverJob?.cancel()
         uiObserverJob = null
+        tileRefreshJob?.cancel()
+        tileRefreshJob = null
     }
 
     private fun observeSettings() {
@@ -148,6 +154,25 @@ class DreamBreakTileService : TileService() {
                     preferences = uiState.preferences,
                     qsTileCountdownAsTitle = uiState.qsTileCountdownAsTitle,
                 )
+            }
+        }
+    }
+
+    private fun startTileRefreshJob() {
+        if (tileRefreshJob?.isActive == true) {
+            return
+        }
+
+        tileRefreshJob = scope.launch {
+            while (isActive) {
+                val uiState = BreakRuntime.uiState.value
+                updateTile(
+                    appEnabled = uiState.appEnabled,
+                    state = uiState.state,
+                    preferences = uiState.preferences,
+                    qsTileCountdownAsTitle = uiState.qsTileCountdownAsTitle,
+                )
+                delay(1000)
             }
         }
     }
