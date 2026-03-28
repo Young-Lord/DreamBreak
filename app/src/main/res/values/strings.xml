@@ -26,6 +26,8 @@
     <string name="home_app_status_off">Stopped</string>
     <string name="home_toggle_disable">Tap to disable</string>
     <string name="home_toggle_enable">Tap to enable</string>
+    <string name="home_toggle_locked">Complete required setup in Settings first</string>
+    <string name="home_break_cycle_locked_warning">Before enabling break cycle, open \"Pause timer in selected apps\", turn on its switch at least once, and add at least one app other than Dream Break.</string>
     <string name="action_small_break">Small break now</string>
     <string name="action_big_break">Big break now</string>
     <string name="action_postpone_5m">Postpone 5 minutes</string>

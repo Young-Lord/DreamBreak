@@ -41,6 +41,9 @@ data class AppSettings(
     val breakOverlayFadeInDurationMs: Int = 300,
     val breakOverlayFadeOutDurationMs: Int = 300,
     val themeMode: AppThemeMode = AppThemeMode.FOLLOW_SYSTEM,
+    val hasVisitedSpecificAppsPage: Boolean = false,
+    val hasEnabledPauseInListedAppsOnce: Boolean = false,
+    val hasAddedExternalPauseAppOnce: Boolean = false,
 )
 
 class SettingsStore(private val context: Context) {
@@ -76,10 +79,18 @@ class SettingsStore(private val context: Context) {
         val legacyOverlayBackgroundUri = prefs[Keys.OVERLAY_BACKGROUND_URI] ?: ""
         val legacyOverlayAnimationDurationMs =
             (prefs[Keys.BREAK_OVERLAY_ANIMATION_DURATION_MS] ?: 300).coerceIn(0, 5000)
+        val monitoredApps = prefs[Keys.MONITORED_APPS] ?: ""
+        val pauseInListedApps = prefs[Keys.PAUSE_IN_LISTED_APPS] ?: false
+        val inferredVisitedSpecificAppsPage = pauseInListedApps || monitoredApps.isNotBlank()
+        val inferredEnabledPauseInListedApps = pauseInListedApps
+        val inferredAddedExternalPauseApp = hasExternalAppConfigured(
+            monitoredApps = monitoredApps,
+            selfPackageName = context.packageName,
+        )
         AppSettings(
             preferences = preferences,
-            pauseInListedApps = prefs[Keys.PAUSE_IN_LISTED_APPS] ?: false,
-            monitoredApps = prefs[Keys.MONITORED_APPS] ?: "",
+            pauseInListedApps = pauseInListedApps,
+            monitoredApps = monitoredApps,
             autoStartOnBoot = prefs[Keys.AUTO_START_ON_BOOT] ?: false,
             appEnabled = prefs[Keys.APP_ENABLED] ?: true,
             overlayTransparencyPercent = (prefs[Keys.OVERLAY_TRANSPARENCY_PERCENT] ?: 28).coerceIn(0, 100),
@@ -112,6 +123,12 @@ class SettingsStore(private val context: Context) {
                 (prefs[Keys.BREAK_OVERLAY_FADE_OUT_DURATION_MS] ?: legacyOverlayAnimationDurationMs)
                     .coerceIn(0, 5000),
             themeMode = AppThemeMode.fromStorage(prefs[Keys.THEME_MODE]),
+            hasVisitedSpecificAppsPage =
+                prefs[Keys.HAS_VISITED_SPECIFIC_APPS_PAGE] ?: inferredVisitedSpecificAppsPage,
+            hasEnabledPauseInListedAppsOnce =
+                prefs[Keys.HAS_ENABLED_PAUSE_IN_LISTED_APPS_ONCE] ?: inferredEnabledPauseInListedApps,
+            hasAddedExternalPauseAppOnce =
+                prefs[Keys.HAS_ADDED_EXTERNAL_PAUSE_APP_ONCE] ?: inferredAddedExternalPauseApp,
         )
     }
 
@@ -174,6 +191,9 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.BREAK_OVERLAY_ANIMATION_DURATION_MS] =
                 settings.breakOverlayFadeInDurationMs.coerceIn(0, 5000)
             prefs[Keys.THEME_MODE] = settings.themeMode.storageValue
+            prefs[Keys.HAS_VISITED_SPECIFIC_APPS_PAGE] = settings.hasVisitedSpecificAppsPage
+            prefs[Keys.HAS_ENABLED_PAUSE_IN_LISTED_APPS_ONCE] = settings.hasEnabledPauseInListedAppsOnce
+            prefs[Keys.HAS_ADDED_EXTERNAL_PAUSE_APP_ONCE] = settings.hasAddedExternalPauseAppOnce
         }
     }
 
@@ -223,5 +243,18 @@ class SettingsStore(private val context: Context) {
         val BREAK_OVERLAY_FADE_OUT_DURATION_MS = intPreferencesKey("break_overlay_fade_out_duration_ms")
         val BREAK_OVERLAY_ANIMATION_DURATION_MS = intPreferencesKey("break_overlay_animation_duration_ms")
         val THEME_MODE = intPreferencesKey("theme_mode")
+        val HAS_VISITED_SPECIFIC_APPS_PAGE =
+            booleanPreferencesKey("has_visited_specific_apps_page")
+        val HAS_ENABLED_PAUSE_IN_LISTED_APPS_ONCE =
+            booleanPreferencesKey("has_enabled_pause_in_listed_apps_once")
+        val HAS_ADDED_EXTERNAL_PAUSE_APP_ONCE =
+            booleanPreferencesKey("has_added_external_pause_app_once")
     }
+}
+
+private fun hasExternalAppConfigured(monitoredApps: String, selfPackageName: String): Boolean {
+    return monitoredApps
+        .split(',')
+        .map { it.trim() }
+        .any { it.isNotEmpty() && it != selfPackageName }
 }

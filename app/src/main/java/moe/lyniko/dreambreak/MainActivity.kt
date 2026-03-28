@@ -270,6 +270,9 @@ fun DreamBreakApp() {
                 breakOverlayFadeInDurationMs = settings.breakOverlayFadeInDurationMs,
                 breakOverlayFadeOutDurationMs = settings.breakOverlayFadeOutDurationMs,
                 themeMode = settings.themeMode,
+                hasVisitedSpecificAppsPage = settings.hasVisitedSpecificAppsPage,
+                hasEnabledPauseInListedAppsOnce = settings.hasEnabledPauseInListedAppsOnce,
+                hasAddedExternalPauseAppOnce = settings.hasAddedExternalPauseAppOnce,
             )
             settingsLoaded = true
         }
@@ -334,6 +337,9 @@ fun DreamBreakApp() {
                 breakOverlayFadeInDurationMs = uiState.breakOverlayFadeInDurationMs,
                 breakOverlayFadeOutDurationMs = uiState.breakOverlayFadeOutDurationMs,
                 themeMode = uiState.themeMode,
+                hasVisitedSpecificAppsPage = uiState.hasVisitedSpecificAppsPage,
+                hasEnabledPauseInListedAppsOnce = uiState.hasEnabledPauseInListedAppsOnce,
+                hasAddedExternalPauseAppOnce = uiState.hasAddedExternalPauseAppOnce,
             )
         )
     }
@@ -375,6 +381,11 @@ fun DreamBreakApp() {
         return
     }
 
+    val breakCycleEnableBlocked =
+        !uiState.hasVisitedSpecificAppsPage ||
+            !uiState.hasEnabledPauseInListedAppsOnce ||
+            !uiState.hasAddedExternalPauseAppOnce
+
     NavigationSuiteScaffold(
         navigationSuiteItems = {
             AppDestinations.entries.forEach {
@@ -406,6 +417,7 @@ fun DreamBreakApp() {
                             state = uiState.state,
                             preferences = uiState.preferences,
                             appEnabled = uiState.appEnabled,
+                            breakCycleEnableBlocked = breakCycleEnableBlocked,
                             onAppEnabledChange = { BreakRuntime.setAppEnabled(it) },
                             onBreakNow = { BreakRuntime.requestBreakNow() },
                             onBigBreakNow = { BreakRuntime.requestBreakNow(bigBreak = true) },
@@ -444,6 +456,9 @@ fun DreamBreakApp() {
                             onPreferencesChange = { BreakRuntime.updatePreferences(it) },
                             onPauseInListedAppsChange = { enabled ->
                                 BreakRuntime.setPauseInListedApps(enabled)
+                                if (enabled) {
+                                    BreakRuntime.markPauseInListedAppsEnabledOnce()
+                                }
                                 BreakRuntime.setAppPauseActive(
                                     shouldPauseForForegroundApp(
                                         context = context,
@@ -454,6 +469,11 @@ fun DreamBreakApp() {
                             },
                             onMonitoredAppsChange = { monitoredApps ->
                                 BreakRuntime.setMonitoredApps(monitoredApps)
+                                val hasExternalApp = parsePackageList(monitoredApps)
+                                    .any { it != context.packageName }
+                                if (hasExternalApp) {
+                                    BreakRuntime.markExternalPauseAppAddedOnce()
+                                }
                                 BreakRuntime.setAppPauseActive(
                                     shouldPauseForForegroundApp(
                                         context = context,
@@ -525,6 +545,7 @@ fun DreamBreakApp() {
                                     BreakReminderService.PRE_BREAK_CHANNEL_ID,
                                 )
                             },
+                            onSpecificAppsPageOpened = { BreakRuntime.markSpecificAppsPageVisited() },
                         )
                     }
                 }
@@ -828,6 +849,7 @@ private fun HomePage(
     state: BreakState,
     preferences: BreakPreferences,
     appEnabled: Boolean,
+    breakCycleEnableBlocked: Boolean,
     onAppEnabledChange: (Boolean) -> Unit,
     onBreakNow: () -> Unit,
     onBigBreakNow: () -> Unit,
@@ -845,8 +867,16 @@ private fun HomePage(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        if (breakCycleEnableBlocked) {
+            Text(
+                text = stringResource(R.string.home_break_cycle_locked_warning),
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
         Button(
             onClick = { onAppEnabledChange(!appEnabled) },
+            enabled = appEnabled || !breakCycleEnableBlocked,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(78.dp),
@@ -868,6 +898,8 @@ private fun HomePage(
                 Text(
                     text = if (appEnabled) {
                         stringResource(R.string.home_toggle_disable)
+                    } else if (breakCycleEnableBlocked) {
+                        stringResource(R.string.home_toggle_locked)
                     } else {
                         stringResource(R.string.home_toggle_enable)
                     },
@@ -959,6 +991,7 @@ private fun SettingsPage(
     onBreakOverlayFadeInDurationMsChange: (Int) -> Unit,
     onBreakOverlayFadeOutDurationMsChange: (Int) -> Unit,
     onOpenPreBreakNotificationChannelSettings: () -> Unit,
+    onSpecificAppsPageOpened: () -> Unit,
 ) {
     val context = LocalContext.current
     val defaultPreferences = remember { BreakPreferences() }
@@ -1278,7 +1311,10 @@ private fun SettingsPage(
             )
         }
 
-        Button(onClick = { openSubPage = true }) {
+        Button(onClick = {
+            onSpecificAppsPageOpened()
+            openSubPage = true
+        }) {
             Text(stringResource(R.string.settings_open_app_subpage))
         }
         Text(

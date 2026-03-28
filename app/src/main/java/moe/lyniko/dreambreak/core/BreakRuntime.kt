@@ -37,7 +37,16 @@ data class BreakUiState(
     val breakOverlayFadeInDurationMs: Int = 300,
     val breakOverlayFadeOutDurationMs: Int = 300,
     val themeMode: AppThemeMode = AppThemeMode.FOLLOW_SYSTEM,
+    val hasVisitedSpecificAppsPage: Boolean = false,
+    val hasEnabledPauseInListedAppsOnce: Boolean = false,
+    val hasAddedExternalPauseAppOnce: Boolean = false,
 )
+
+private fun BreakUiState.isBreakCycleEnableUnlocked(): Boolean {
+    return hasVisitedSpecificAppsPage &&
+        hasEnabledPauseInListedAppsOnce &&
+        hasAddedExternalPauseAppOnce
+}
 
 object BreakRuntime {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -97,8 +106,12 @@ object BreakRuntime {
         _uiState.value = current.copy(monitoredApps = value)
     }
 
-    fun setAppEnabled(enabled: Boolean) {
+    fun setAppEnabled(enabled: Boolean): Boolean {
         val current = _uiState.value
+        if (enabled && !current.isBreakCycleEnableUnlocked()) {
+            return current.appEnabled
+        }
+
         _uiState.value = if (enabled) {
             current.copy(
                 appEnabled = true,
@@ -123,6 +136,31 @@ object BreakRuntime {
                 )
             )
         }
+        return _uiState.value.appEnabled
+    }
+
+    fun markSpecificAppsPageVisited() {
+        val current = _uiState.value
+        if (current.hasVisitedSpecificAppsPage) {
+            return
+        }
+        _uiState.value = current.copy(hasVisitedSpecificAppsPage = true)
+    }
+
+    fun markPauseInListedAppsEnabledOnce() {
+        val current = _uiState.value
+        if (current.hasEnabledPauseInListedAppsOnce) {
+            return
+        }
+        _uiState.value = current.copy(hasEnabledPauseInListedAppsOnce = true)
+    }
+
+    fun markExternalPauseAppAddedOnce() {
+        val current = _uiState.value
+        if (current.hasAddedExternalPauseAppOnce) {
+            return
+        }
+        _uiState.value = current.copy(hasAddedExternalPauseAppOnce = true)
     }
 
     fun setOverlayTransparencyPercent(value: Int) {
@@ -321,14 +359,19 @@ object BreakRuntime {
         breakOverlayFadeInDurationMs: Int,
         breakOverlayFadeOutDurationMs: Int,
         themeMode: AppThemeMode,
+        hasVisitedSpecificAppsPage: Boolean,
+        hasEnabledPauseInListedAppsOnce: Boolean,
+        hasAddedExternalPauseAppOnce: Boolean,
     ) {
         val current = _uiState.value
+        val isBreakCycleEnableUnlocked =
+            hasVisitedSpecificAppsPage && hasEnabledPauseInListedAppsOnce && hasAddedExternalPauseAppOnce
         _uiState.value = current.copy(
             preferences = preferences,
             pauseInListedApps = pauseInListedApps,
             monitoredApps = monitoredApps,
             autoStartOnBoot = autoStartOnBoot,
-            appEnabled = appEnabled,
+            appEnabled = appEnabled && isBreakCycleEnableUnlocked,
             overlayTransparencyPercent = overlayTransparencyPercent.coerceIn(0, 100),
             overlayBackgroundPortraitUri = overlayBackgroundPortraitUri,
             overlayBackgroundLandscapeUri = overlayBackgroundLandscapeUri,
@@ -348,6 +391,9 @@ object BreakRuntime {
             breakOverlayFadeInDurationMs = breakOverlayFadeInDurationMs.coerceIn(0, 5000),
             breakOverlayFadeOutDurationMs = breakOverlayFadeOutDurationMs.coerceIn(0, 5000),
             themeMode = themeMode,
+            hasVisitedSpecificAppsPage = hasVisitedSpecificAppsPage,
+            hasEnabledPauseInListedAppsOnce = hasEnabledPauseInListedAppsOnce,
+            hasAddedExternalPauseAppOnce = hasAddedExternalPauseAppOnce,
             state = current.state.copy(
                 secondsToNextBreak = current.state.secondsToNextBreak.coerceAtMost(preferences.smallEvery)
             )

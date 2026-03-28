@@ -54,10 +54,14 @@ class BootCompletedReceiver : BroadcastReceiver() {
                     breakOverlayFadeInDurationMs = settings.breakOverlayFadeInDurationMs,
                     breakOverlayFadeOutDurationMs = settings.breakOverlayFadeOutDurationMs,
                     themeMode = settings.themeMode,
+                    hasVisitedSpecificAppsPage = settings.hasVisitedSpecificAppsPage,
+                    hasEnabledPauseInListedAppsOnce = settings.hasEnabledPauseInListedAppsOnce,
+                    hasAddedExternalPauseAppOnce = settings.hasAddedExternalPauseAppOnce,
                 )
+                val effectiveAppEnabled = BreakRuntime.uiState.value.appEnabled
                 val shouldStartRuntime = when (action) {
-                    Intent.ACTION_MY_PACKAGE_REPLACED -> settings.appEnabled
-                    else -> settings.autoStartOnBoot && settings.appEnabled
+                    Intent.ACTION_MY_PACKAGE_REPLACED -> effectiveAppEnabled
+                    else -> settings.autoStartOnBoot && effectiveAppEnabled
                 }
 
                 if (shouldStartRuntime) {
@@ -66,8 +70,8 @@ class BootCompletedReceiver : BroadcastReceiver() {
                 }
 
                 val shouldStartService = when (action) {
-                    Intent.ACTION_MY_PACKAGE_REPLACED -> settings.appEnabled
-                    else -> settings.autoStartOnBoot && settings.appEnabled
+                    Intent.ACTION_MY_PACKAGE_REPLACED -> effectiveAppEnabled
+                    else -> settings.autoStartOnBoot && effectiveAppEnabled
                 }
 
                 if (

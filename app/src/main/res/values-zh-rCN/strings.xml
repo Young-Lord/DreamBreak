@@ -26,6 +26,8 @@
     <string name="home_app_status_off">已停止</string>
     <string name="home_toggle_disable">点击关闭</string>
     <string name="home_toggle_enable">点击启用</string>
+    <string name="home_toggle_locked">请先完成设置中的必要配置</string>
+    <string name="home_break_cycle_locked_warning">启用休息周期前，请先进入“在这些应用中暂停计时”页面，至少打开一次总开关，并添加至少一个除本应用外的应用。</string>
     <string name="action_small_break">立即小休</string>
     <string name="action_big_break">立即大休</string>
     <string name="action_postpone_5m">延后 5 分钟</string>

@@ -65,12 +65,12 @@ class DreamBreakTileService : TileService() {
         scope.launch {
             val appContext = applicationContext
             val currentSettings = settingsStore.settingsFlow.first()
-            val nextEnabled = !currentSettings.appEnabled
+            val nextEnabled = !BreakRuntime.uiState.value.appEnabled
 
-            BreakRuntime.setAppEnabled(nextEnabled)
-            settingsStore.save(currentSettings.copy(appEnabled = nextEnabled))
+            val effectiveEnabled = BreakRuntime.setAppEnabled(nextEnabled)
+            settingsStore.save(currentSettings.copy(appEnabled = effectiveEnabled))
 
-            if (nextEnabled) {
+            if (effectiveEnabled) {
                 BreakRuntime.start()
                 AppPauseMonitor.start(appContext)
                 if (
@@ -203,6 +203,9 @@ class DreamBreakTileService : TileService() {
             breakOverlayFadeInDurationMs = settings.breakOverlayFadeInDurationMs,
             breakOverlayFadeOutDurationMs = settings.breakOverlayFadeOutDurationMs,
             themeMode = settings.themeMode,
+            hasVisitedSpecificAppsPage = settings.hasVisitedSpecificAppsPage,
+            hasEnabledPauseInListedAppsOnce = settings.hasEnabledPauseInListedAppsOnce,
+            hasAddedExternalPauseAppOnce = settings.hasAddedExternalPauseAppOnce,
         )
     }
 
