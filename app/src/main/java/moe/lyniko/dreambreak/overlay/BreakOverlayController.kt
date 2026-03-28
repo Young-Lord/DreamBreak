@@ -10,6 +10,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowManager
@@ -33,6 +34,7 @@ class BreakOverlayController(
     private val context: Context,
     private val onExitBreak: (Int) -> Unit,
     private val onPostponeBreak: (Int) -> Unit,
+    private val onDismissRequest: (() -> Unit)? = null,
 ) {
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
@@ -209,8 +211,20 @@ class BreakOverlayController(
                 setBackgroundColor(Color.TRANSPARENT)
                 isClickable = true
                 isFocusable = true
+                isFocusableInTouchMode = true
                 setOnTouchListener { _, _ -> true }
+                setOnKeyListener { _, keyCode, event ->
+                    if (keyCode == KeyEvent.KEYCODE_BACK && onDismissRequest != null) {
+                        if (event.action == KeyEvent.ACTION_UP) {
+                            onDismissRequest.invoke()
+                        }
+                        true
+                    } else {
+                        false
+                    }
+                }
             }
+            root.requestFocus()
 
             val backgroundImage = ImageView(context).apply {
                 scaleType = ImageView.ScaleType.CENTER_CROP

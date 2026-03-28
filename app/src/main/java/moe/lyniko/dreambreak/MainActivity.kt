@@ -2,8 +2,10 @@ package moe.lyniko.dreambreak
 
 import android.Manifest
 import android.app.ActivityManager
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -119,6 +121,8 @@ import moe.lyniko.dreambreak.notification.BreakReminderService
 import moe.lyniko.dreambreak.notification.PostponePickerActivity
 import moe.lyniko.dreambreak.overlay.BreakOverlayController
 import moe.lyniko.dreambreak.ui.theme.DreamBreakTheme
+
+private const val OVERLAY_PREVIEW_AUTO_DISMISS_MS = 20_000L
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -969,6 +973,7 @@ private fun SettingsPage(
             context = context.applicationContext,
             onExitBreak = { _ -> overlayPreviewVisible = false },
             onPostponeBreak = { _ -> overlayPreviewVisible = false },
+            onDismissRequest = { overlayPreviewVisible = false },
         )
     }
 
@@ -986,6 +991,45 @@ private fun SettingsPage(
 
     BackHandler(enabled = openSubPage) {
         openSubPage = false
+    }
+
+    BackHandler(enabled = overlayPreviewVisible && !openSubPage) {
+        overlayPreviewVisible = false
+    }
+
+    LaunchedEffect(overlayPreviewVisible) {
+        if (!overlayPreviewVisible) {
+            return@LaunchedEffect
+        }
+        delay(OVERLAY_PREVIEW_AUTO_DISMISS_MS)
+        overlayPreviewVisible = false
+    }
+
+    DisposableEffect(context.applicationContext, overlayPreviewVisible) {
+        if (!overlayPreviewVisible) {
+            onDispose { }
+        } else {
+            val appContext = context.applicationContext
+            val screenOffReceiver = object : BroadcastReceiver() {
+                override fun onReceive(receiverContext: Context, intent: Intent) {
+                    if (intent.action == Intent.ACTION_SCREEN_OFF) {
+                        overlayPreviewVisible = false
+                    }
+                }
+            }
+            val intentFilter = IntentFilter(Intent.ACTION_SCREEN_OFF)
+            ContextCompat.registerReceiver(
+                appContext,
+                screenOffReceiver,
+                intentFilter,
+                ContextCompat.RECEIVER_NOT_EXPORTED,
+            )
+            onDispose {
+                runCatching {
+                    appContext.unregisterReceiver(screenOffReceiver)
+                }
+            }
+        }
     }
 
     LaunchedEffect(
