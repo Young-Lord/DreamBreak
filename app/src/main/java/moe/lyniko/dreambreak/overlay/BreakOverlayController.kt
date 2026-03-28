@@ -606,7 +606,7 @@ class BreakOverlayController(
         currentOverlayFadeInDurationMs = 300
         currentOverlayFadeOutDurationMs = 300
         if (skipAnimation || fadeOutDurationMs <= 0) {
-            runCatching { windowManager.removeView(view) }
+            removeOverlayView(view = view)
             return
         }
         view.animate().cancel()
@@ -614,9 +614,16 @@ class BreakOverlayController(
             .alpha(0f)
             .setDuration(fadeOutDurationMs.toLong())
             .withEndAction {
-                runCatching { windowManager.removeView(view) }
+                removeOverlayView(view = view)
             }
             .start()
+    }
+
+    private fun removeOverlayView(view: View) {
+        runCatching {
+            view.visibility = View.GONE
+            windowManager.removeView(view)
+        }
     }
 
     private fun normalizePostponeOptions(options: List<Int>): List<Int> {

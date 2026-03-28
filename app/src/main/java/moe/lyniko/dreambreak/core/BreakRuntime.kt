@@ -67,9 +67,8 @@ object BreakRuntime {
                 if (!current.appEnabled) {
                     continue
                 }
-                _uiState.value = current.copy(
-                    state = BreakEngine.tick(current.state, current.preferences)
-                )
+                val nextState = BreakEngine.tick(current.state, current.preferences)
+                _uiState.value = current.copy(state = nextState)
             }
         }
     }
@@ -91,14 +90,13 @@ object BreakRuntime {
 
     fun setAppPauseActive(active: Boolean) {
         val current = _uiState.value
-        _uiState.value = current.copy(
-            state = BreakEngine.setPauseReason(
-                state = current.state,
-                reason = PauseReason.APP_OPEN,
-                active = active,
-                preferences = current.preferences,
-            )
+        val nextState = BreakEngine.setPauseReason(
+            state = current.state,
+            reason = PauseReason.APP_OPEN,
+            active = active,
+            preferences = current.preferences,
         )
+        _uiState.value = current.copy(state = nextState)
     }
 
     fun setMonitoredApps(value: String) {
@@ -399,4 +397,5 @@ object BreakRuntime {
             )
         )
     }
+
 }
