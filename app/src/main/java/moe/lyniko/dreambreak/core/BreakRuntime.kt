@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import moe.lyniko.dreambreak.data.AppSettings
 import moe.lyniko.dreambreak.data.AppThemeMode
 
 data class BreakUiState(
@@ -331,6 +332,37 @@ object BreakRuntime {
                 )
             )
         }
+    }
+
+    fun restoreSettings(settings: AppSettings) {
+        restoreSettings(
+            preferences = settings.preferences,
+            pauseInListedApps = settings.pauseInListedApps,
+            monitoredApps = settings.monitoredApps,
+            autoStartOnBoot = settings.autoStartOnBoot,
+            appEnabled = settings.appEnabled,
+            overlayTransparencyPercent = settings.overlayTransparencyPercent,
+            overlayBackgroundPortraitUri = settings.overlayBackgroundPortraitUri,
+            overlayBackgroundLandscapeUri = settings.overlayBackgroundLandscapeUri,
+            onboardingCompleted = settings.onboardingCompleted,
+            excludeFromRecents = settings.excludeFromRecents,
+            persistentNotificationEnabled = settings.persistentNotificationEnabled,
+            persistentNotificationUpdateFrequencySeconds = settings.persistentNotificationUpdateFrequencySeconds,
+            persistentNotificationTitleTemplate = settings.persistentNotificationTitleTemplate,
+            persistentNotificationContentTemplate = settings.persistentNotificationContentTemplate,
+            qsTileCountdownAsTitle = settings.qsTileCountdownAsTitle,
+            breakShowPostponeButton = settings.breakShowPostponeButton,
+            breakShowTitle = settings.breakShowTitle,
+            breakShowCountdown = settings.breakShowCountdown,
+            breakShowExitButton = settings.breakShowExitButton,
+            breakExitPostponeSeconds = settings.breakExitPostponeSeconds,
+            breakOverlayFadeInDurationMs = settings.breakOverlayFadeInDurationMs,
+            breakOverlayFadeOutDurationMs = settings.breakOverlayFadeOutDurationMs,
+            themeMode = settings.themeMode,
+            hasVisitedSpecificAppsPage = settings.hasVisitedSpecificAppsPage,
+            hasEnabledPauseInListedAppsOnce = settings.hasEnabledPauseInListedAppsOnce,
+            hasAddedExternalPauseAppOnce = settings.hasAddedExternalPauseAppOnce,
+        )
     }
 
     fun restoreSettings(
