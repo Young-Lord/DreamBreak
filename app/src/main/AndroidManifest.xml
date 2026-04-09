@@ -49,11 +49,17 @@
             android:name=".notification.BreakReminderService"
             android:enabled="true"
             android:exported="false"
+            android:stopWithTask="false"
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="persistent_break_timer" />
         </service>
+
+        <receiver
+            android:name=".notification.BreakReminderRestarterReceiver"
+            android:enabled="true"
+            android:exported="false" />
 
         <service
             android:name=".tile.DreamBreakTileService"

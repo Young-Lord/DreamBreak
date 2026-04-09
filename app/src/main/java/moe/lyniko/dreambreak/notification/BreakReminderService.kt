@@ -4,6 +4,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
@@ -14,12 +15,15 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import moe.lyniko.dreambreak.MainActivity
 import moe.lyniko.dreambreak.R
 import moe.lyniko.dreambreak.core.BreakPhase
@@ -36,6 +40,8 @@ import moe.lyniko.dreambreak.core.PERSISTENT_NOTIFICATION_PLACEHOLDER_DONE_SMALL
 import moe.lyniko.dreambreak.core.PERSISTENT_NOTIFICATION_PLACEHOLDER_NEXT_BREAK_TYPE
 import moe.lyniko.dreambreak.core.PERSISTENT_NOTIFICATION_PLACEHOLDER_TIME_TO_NEXT_BREAK
 import moe.lyniko.dreambreak.core.SessionMode
+import moe.lyniko.dreambreak.data.AppSettings
+import moe.lyniko.dreambreak.data.SettingsStore
 import moe.lyniko.dreambreak.monitor.AppPauseMonitor
 import moe.lyniko.dreambreak.monitor.ScreenLockReceiver
 import moe.lyniko.dreambreak.overlay.BreakOverlayController
@@ -52,6 +58,7 @@ class BreakReminderService : Service() {
     private var lastNotifiedContentTemplate: String = ""
     private var lastNotificationElapsedRealtimeMs: Long = 0L
     private var lastPreBreakNotifiedCycle: Int = -1
+    private var settingsRestoredFromDisk = false
 
     override fun onCreate() {
         super.onCreate()
@@ -113,6 +120,9 @@ class BreakReminderService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        ensureRuntimeSettingsLoaded()
+        cancelScheduledRestart()
+
         val uiState = BreakRuntime.uiState.value
         val hasPermission = MainActivity.hasNotificationPermission(this)
         if (!uiState.persistentNotificationEnabled || !uiState.appEnabled || !hasPermission) {
@@ -149,7 +159,13 @@ class BreakReminderService : Service() {
         return START_STICKY
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        scheduleRestartIfNeeded()
+        super.onTaskRemoved(rootIntent)
+    }
+
     override fun onDestroy() {
+        scheduleRestartIfNeeded()
         observeJob?.cancel()
         unregisterReceiver(screenLockReceiver)
         overlayController.release()
@@ -481,14 +497,97 @@ class BreakReminderService : Service() {
         manager.createNotificationChannel(preBreakChannel)
     }
 
+    private fun ensureRuntimeSettingsLoaded() {
+        if (settingsRestoredFromDisk) {
+            return
+        }
+
+        runCatching {
+            val settings = runBlocking(Dispatchers.IO) {
+                SettingsStore(applicationContext).settingsFlow.first()
+            }
+            applySettingsToRuntime(settings)
+            settingsRestoredFromDisk = true
+        }
+    }
+
+    private fun applySettingsToRuntime(settings: AppSettings) {
+        BreakRuntime.restoreSettings(
+            preferences = settings.preferences,
+            pauseInListedApps = settings.pauseInListedApps,
+            monitoredApps = settings.monitoredApps,
+            autoStartOnBoot = settings.autoStartOnBoot,
+            appEnabled = settings.appEnabled,
+            overlayTransparencyPercent = settings.overlayTransparencyPercent,
+            overlayBackgroundPortraitUri = settings.overlayBackgroundPortraitUri,
+            overlayBackgroundLandscapeUri = settings.overlayBackgroundLandscapeUri,
+            onboardingCompleted = settings.onboardingCompleted,
+            excludeFromRecents = settings.excludeFromRecents,
+            persistentNotificationEnabled = settings.persistentNotificationEnabled,
+            persistentNotificationUpdateFrequencySeconds = settings.persistentNotificationUpdateFrequencySeconds,
+            persistentNotificationTitleTemplate = settings.persistentNotificationTitleTemplate,
+            persistentNotificationContentTemplate = settings.persistentNotificationContentTemplate,
+            qsTileCountdownAsTitle = settings.qsTileCountdownAsTitle,
+            breakShowPostponeButton = settings.breakShowPostponeButton,
+            breakShowTitle = settings.breakShowTitle,
+            breakShowCountdown = settings.breakShowCountdown,
+            breakShowExitButton = settings.breakShowExitButton,
+            breakExitPostponeSeconds = settings.breakExitPostponeSeconds,
+            breakOverlayFadeInDurationMs = settings.breakOverlayFadeInDurationMs,
+            breakOverlayFadeOutDurationMs = settings.breakOverlayFadeOutDurationMs,
+            themeMode = settings.themeMode,
+            hasVisitedSpecificAppsPage = settings.hasVisitedSpecificAppsPage,
+            hasEnabledPauseInListedAppsOnce = settings.hasEnabledPauseInListedAppsOnce,
+            hasAddedExternalPauseAppOnce = settings.hasAddedExternalPauseAppOnce,
+        )
+    }
+
+    private fun scheduleRestartIfNeeded() {
+        val uiState = BreakRuntime.uiState.value
+        if (!uiState.persistentNotificationEnabled || !uiState.appEnabled || !MainActivity.hasNotificationPermission(this)) {
+            cancelScheduledRestart()
+            return
+        }
+
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as? android.app.AlarmManager ?: return
+        val pendingIntent = restartPendingIntent()
+        val triggerAtMillis = SystemClock.elapsedRealtime() + RESTART_DELAY_MS
+        alarmManager.setAndAllowWhileIdle(
+            android.app.AlarmManager.ELAPSED_REALTIME_WAKEUP,
+            triggerAtMillis,
+            pendingIntent,
+        )
+    }
+
+    private fun cancelScheduledRestart() {
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as? android.app.AlarmManager ?: return
+        alarmManager.cancel(restartPendingIntent())
+    }
+
+    private fun restartPendingIntent(): PendingIntent {
+        val intent = Intent().apply {
+            component = ComponentName(this@BreakReminderService, BreakReminderRestarterReceiver::class.java)
+            action = ACTION_RESTART_SERVICE
+        }
+        return PendingIntent.getBroadcast(
+            this,
+            REQUEST_CODE_RESTART,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
+
     companion object {
         const val CHANNEL_ID = "dream_break_reminder"
         const val PRE_BREAK_CHANNEL_ID = "dream_break_pre_break"
+        const val ACTION_RESTART_SERVICE = "moe.lyniko.dreambreak.action.RESTART_BREAK_REMINDER_SERVICE"
         private const val NOTIFICATION_ID = 1124
         private const val PRE_BREAK_NOTIFICATION_ID = 1125
         private const val REQUEST_CODE_POSTPONE = 881
         private const val REQUEST_CODE_PRE_BREAK_CONTENT = 882
+        private const val REQUEST_CODE_RESTART = 883
         private const val DEFAULT_NORMAL_MODE_UPDATE_SECONDS = 10
+        private const val RESTART_DELAY_MS = 2_000L
 
         fun start(context: Context) {
             val serviceIntent = Intent(context, BreakReminderService::class.java)
