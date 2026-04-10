@@ -25,6 +25,10 @@ import moe.lyniko.dreambreak.R
 import moe.lyniko.dreambreak.core.BreakPhase
 import moe.lyniko.dreambreak.core.BreakState
 import moe.lyniko.dreambreak.core.DEFAULT_POSTPONE_DURATION_SECONDS
+import moe.lyniko.dreambreak.core.OVERLAY_ANIMATION_DURATION_MAX
+import moe.lyniko.dreambreak.core.OVERLAY_ANIMATION_DURATION_MIN
+import moe.lyniko.dreambreak.core.OVERLAY_TRANSPARENCY_MAX
+import moe.lyniko.dreambreak.core.OVERLAY_TRANSPARENCY_MIN
 import moe.lyniko.dreambreak.core.DEFAULT_POSTPONE_DURATIONS_SECONDS
 import moe.lyniko.dreambreak.core.DEFAULT_TOP_FLASH_BIG_TEXT
 import moe.lyniko.dreambreak.core.DEFAULT_TOP_FLASH_SMALL_TEXT
@@ -113,8 +117,8 @@ class BreakOverlayController(
                 showCountdown = showCountdown,
                 showExitButton = showExitButton,
                 exitPostponeSeconds = exitPostponeSeconds.coerceAtLeast(1),
-                overlayFadeInDurationMs = overlayFadeInDurationMs.coerceIn(0, 5000),
-                overlayFadeOutDurationMs = overlayFadeOutDurationMs.coerceIn(0, 5000),
+                overlayFadeInDurationMs = overlayFadeInDurationMs.coerceIn(OVERLAY_ANIMATION_DURATION_MIN, OVERLAY_ANIMATION_DURATION_MAX),
+                overlayFadeOutDurationMs = overlayFadeOutDurationMs.coerceIn(OVERLAY_ANIMATION_DURATION_MIN, OVERLAY_ANIMATION_DURATION_MAX),
             )
         } else {
             hideFullScreenOverlay()
@@ -456,7 +460,7 @@ class BreakOverlayController(
             }
         }
 
-        val dimAlpha = ((100 - overlayTransparencyPercent.coerceIn(0, 100)) / 100f)
+        val dimAlpha = ((100 - overlayTransparencyPercent.coerceIn(OVERLAY_TRANSPARENCY_MIN, OVERLAY_TRANSPARENCY_MAX)) / 100f)
             .coerceIn(0f, 1f)
         dimLayer.setBackgroundColor(Color.BLACK)
         dimLayer.alpha = dimAlpha

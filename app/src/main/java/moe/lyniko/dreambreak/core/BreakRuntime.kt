@@ -41,6 +41,8 @@ data class BreakUiState(
     val hasVisitedSpecificAppsPage: Boolean = false,
     val hasEnabledPauseInListedAppsOnce: Boolean = false,
     val hasAddedExternalPauseAppOnce: Boolean = false,
+    val restoreEnabledStateOnStart: Boolean = false,
+    val reenableOnScreenUnlock: Boolean = false,
 )
 
 private fun BreakUiState.isBreakCycleEnableUnlocked(): Boolean {
@@ -48,6 +50,82 @@ private fun BreakUiState.isBreakCycleEnableUnlocked(): Boolean {
         hasEnabledPauseInListedAppsOnce &&
         hasAddedExternalPauseAppOnce
 }
+
+fun AppSettings.applyToUiState(current: BreakUiState): BreakUiState {
+    val isBreakCycleEnableUnlocked =
+        hasVisitedSpecificAppsPage && hasEnabledPauseInListedAppsOnce && hasAddedExternalPauseAppOnce
+    // If restoreEnabledStateOnStart is false (default), always start enabled (ignore stored disabled state)
+    val effectiveAppEnabled = if (restoreEnabledStateOnStart) {
+        appEnabled && isBreakCycleEnableUnlocked
+    } else {
+        isBreakCycleEnableUnlocked
+    }
+    return current.copy(
+        preferences = preferences,
+        pauseInListedApps = pauseInListedApps,
+        monitoredApps = monitoredApps,
+        autoStartOnBoot = autoStartOnBoot,
+        appEnabled = effectiveAppEnabled,
+        overlayTransparencyPercent = overlayTransparencyPercent.coerceIn(OVERLAY_TRANSPARENCY_MIN, OVERLAY_TRANSPARENCY_MAX),
+        overlayBackgroundPortraitUri = overlayBackgroundPortraitUri,
+        overlayBackgroundLandscapeUri = overlayBackgroundLandscapeUri,
+        onboardingCompleted = onboardingCompleted,
+        excludeFromRecents = excludeFromRecents,
+        persistentNotificationEnabled = persistentNotificationEnabled,
+        persistentNotificationUpdateFrequencySeconds =
+            persistentNotificationUpdateFrequencySeconds.coerceIn(NOTIFICATION_FREQUENCY_MIN, NOTIFICATION_FREQUENCY_MAX),
+        persistentNotificationTitleTemplate = persistentNotificationTitleTemplate,
+        persistentNotificationContentTemplate = persistentNotificationContentTemplate,
+        qsTileCountdownAsTitle = qsTileCountdownAsTitle,
+        breakShowPostponeButton = breakShowPostponeButton,
+        breakShowTitle = breakShowTitle,
+        breakShowCountdown = breakShowCountdown,
+        breakShowExitButton = breakShowExitButton,
+        breakExitPostponeSeconds = breakExitPostponeSeconds.coerceIn(BREAK_EXIT_POSTPONE_MIN, BREAK_EXIT_POSTPONE_MAX),
+        breakOverlayFadeInDurationMs = breakOverlayFadeInDurationMs.coerceIn(OVERLAY_ANIMATION_DURATION_MIN, OVERLAY_ANIMATION_DURATION_MAX),
+        breakOverlayFadeOutDurationMs = breakOverlayFadeOutDurationMs.coerceIn(OVERLAY_ANIMATION_DURATION_MIN, OVERLAY_ANIMATION_DURATION_MAX),
+        themeMode = themeMode,
+        hasVisitedSpecificAppsPage = hasVisitedSpecificAppsPage,
+        hasEnabledPauseInListedAppsOnce = hasEnabledPauseInListedAppsOnce,
+        hasAddedExternalPauseAppOnce = hasAddedExternalPauseAppOnce,
+        restoreEnabledStateOnStart = restoreEnabledStateOnStart,
+        reenableOnScreenUnlock = reenableOnScreenUnlock,
+        state = current.state.copy(
+            secondsToNextBreak = current.state.secondsToNextBreak.coerceAtMost(preferences.smallEvery)
+        )
+    )
+}
+
+fun BreakUiState.toAppSettings(): AppSettings = AppSettings(
+    preferences = preferences,
+    pauseInListedApps = pauseInListedApps,
+    monitoredApps = monitoredApps,
+    autoStartOnBoot = autoStartOnBoot,
+    appEnabled = appEnabled,
+    overlayTransparencyPercent = overlayTransparencyPercent,
+    overlayBackgroundPortraitUri = overlayBackgroundPortraitUri,
+    overlayBackgroundLandscapeUri = overlayBackgroundLandscapeUri,
+    onboardingCompleted = onboardingCompleted,
+    excludeFromRecents = excludeFromRecents,
+    persistentNotificationEnabled = persistentNotificationEnabled,
+    persistentNotificationUpdateFrequencySeconds = persistentNotificationUpdateFrequencySeconds,
+    persistentNotificationTitleTemplate = persistentNotificationTitleTemplate,
+    persistentNotificationContentTemplate = persistentNotificationContentTemplate,
+    qsTileCountdownAsTitle = qsTileCountdownAsTitle,
+    breakShowPostponeButton = breakShowPostponeButton,
+    breakShowTitle = breakShowTitle,
+    breakShowCountdown = breakShowCountdown,
+    breakShowExitButton = breakShowExitButton,
+    breakExitPostponeSeconds = breakExitPostponeSeconds,
+    breakOverlayFadeInDurationMs = breakOverlayFadeInDurationMs,
+    breakOverlayFadeOutDurationMs = breakOverlayFadeOutDurationMs,
+    themeMode = themeMode,
+    hasVisitedSpecificAppsPage = hasVisitedSpecificAppsPage,
+    hasEnabledPauseInListedAppsOnce = hasEnabledPauseInListedAppsOnce,
+    hasAddedExternalPauseAppOnce = hasAddedExternalPauseAppOnce,
+    restoreEnabledStateOnStart = restoreEnabledStateOnStart,
+    reenableOnScreenUnlock = reenableOnScreenUnlock,
+)
 
 object BreakRuntime {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -164,7 +242,7 @@ object BreakRuntime {
 
     fun setOverlayTransparencyPercent(value: Int) {
         val current = _uiState.value
-        _uiState.value = current.copy(overlayTransparencyPercent = value.coerceIn(0, 100))
+        _uiState.value = current.copy(overlayTransparencyPercent = value.coerceIn(OVERLAY_TRANSPARENCY_MIN, OVERLAY_TRANSPARENCY_MAX))
     }
 
     fun setOverlayBackgroundPortraitUri(value: String) {
@@ -180,6 +258,16 @@ object BreakRuntime {
     fun setAutoStartOnBoot(enabled: Boolean) {
         val current = _uiState.value
         _uiState.value = current.copy(autoStartOnBoot = enabled)
+    }
+
+    fun setRestoreEnabledStateOnStart(enabled: Boolean) {
+        val current = _uiState.value
+        _uiState.value = current.copy(restoreEnabledStateOnStart = enabled)
+    }
+
+    fun setReenableOnScreenUnlock(enabled: Boolean) {
+        val current = _uiState.value
+        _uiState.value = current.copy(reenableOnScreenUnlock = enabled)
     }
 
     fun setOnboardingCompleted(completed: Boolean) {
@@ -200,7 +288,7 @@ object BreakRuntime {
     fun setPersistentNotificationUpdateFrequencySeconds(value: Int) {
         val current = _uiState.value
         _uiState.value = current.copy(
-            persistentNotificationUpdateFrequencySeconds = value.coerceIn(1, 600)
+            persistentNotificationUpdateFrequencySeconds = value.coerceIn(NOTIFICATION_FREQUENCY_MIN, NOTIFICATION_FREQUENCY_MAX)
         )
     }
 
@@ -231,17 +319,17 @@ object BreakRuntime {
 
     fun setBreakExitPostponeSeconds(seconds: Int) {
         val current = _uiState.value
-        _uiState.value = current.copy(breakExitPostponeSeconds = seconds.coerceIn(1, 3600))
+        _uiState.value = current.copy(breakExitPostponeSeconds = seconds.coerceIn(BREAK_EXIT_POSTPONE_MIN, BREAK_EXIT_POSTPONE_MAX))
     }
 
     fun setBreakOverlayFadeInDurationMs(durationMs: Int) {
         val current = _uiState.value
-        _uiState.value = current.copy(breakOverlayFadeInDurationMs = durationMs.coerceIn(0, 5000))
+        _uiState.value = current.copy(breakOverlayFadeInDurationMs = durationMs.coerceIn(OVERLAY_ANIMATION_DURATION_MIN, OVERLAY_ANIMATION_DURATION_MAX))
     }
 
     fun setBreakOverlayFadeOutDurationMs(durationMs: Int) {
         val current = _uiState.value
-        _uiState.value = current.copy(breakOverlayFadeOutDurationMs = durationMs.coerceIn(0, 5000))
+        _uiState.value = current.copy(breakOverlayFadeOutDurationMs = durationMs.coerceIn(OVERLAY_ANIMATION_DURATION_MIN, OVERLAY_ANIMATION_DURATION_MAX))
     }
 
     fun setBreakShowTitle(enabled: Boolean) {
@@ -323,111 +411,31 @@ object BreakRuntime {
                 )
             )
         } else {
-            _uiState.value = current.copy(
-                state = BreakEngine.setPauseReason(
-                    state = current.state,
-                    reason = PauseReason.SLEEP,
-                    active = false,
-                    preferences = current.preferences,
-                )
+            // If reenableOnScreenUnlock is true and app was disabled, re-enable it
+            val shouldReenable = current.reenableOnScreenUnlock && !current.appEnabled
+            val stateAfterUnlock = BreakEngine.setPauseReason(
+                state = current.state,
+                reason = PauseReason.SLEEP,
+                active = false,
+                preferences = current.preferences,
             )
+            _uiState.value = if (shouldReenable && current.isBreakCycleEnableUnlocked()) {
+                current.copy(
+                    appEnabled = true,
+                    state = if (stateAfterUnlock.secondsToNextBreak <= 0) {
+                        stateAfterUnlock.copy(secondsToNextBreak = current.preferences.smallEvery)
+                    } else {
+                        stateAfterUnlock
+                    }
+                )
+            } else {
+                current.copy(state = stateAfterUnlock)
+            }
         }
     }
 
     fun restoreSettings(settings: AppSettings) {
-        restoreSettings(
-            preferences = settings.preferences,
-            pauseInListedApps = settings.pauseInListedApps,
-            monitoredApps = settings.monitoredApps,
-            autoStartOnBoot = settings.autoStartOnBoot,
-            appEnabled = settings.appEnabled,
-            overlayTransparencyPercent = settings.overlayTransparencyPercent,
-            overlayBackgroundPortraitUri = settings.overlayBackgroundPortraitUri,
-            overlayBackgroundLandscapeUri = settings.overlayBackgroundLandscapeUri,
-            onboardingCompleted = settings.onboardingCompleted,
-            excludeFromRecents = settings.excludeFromRecents,
-            persistentNotificationEnabled = settings.persistentNotificationEnabled,
-            persistentNotificationUpdateFrequencySeconds = settings.persistentNotificationUpdateFrequencySeconds,
-            persistentNotificationTitleTemplate = settings.persistentNotificationTitleTemplate,
-            persistentNotificationContentTemplate = settings.persistentNotificationContentTemplate,
-            qsTileCountdownAsTitle = settings.qsTileCountdownAsTitle,
-            breakShowPostponeButton = settings.breakShowPostponeButton,
-            breakShowTitle = settings.breakShowTitle,
-            breakShowCountdown = settings.breakShowCountdown,
-            breakShowExitButton = settings.breakShowExitButton,
-            breakExitPostponeSeconds = settings.breakExitPostponeSeconds,
-            breakOverlayFadeInDurationMs = settings.breakOverlayFadeInDurationMs,
-            breakOverlayFadeOutDurationMs = settings.breakOverlayFadeOutDurationMs,
-            themeMode = settings.themeMode,
-            hasVisitedSpecificAppsPage = settings.hasVisitedSpecificAppsPage,
-            hasEnabledPauseInListedAppsOnce = settings.hasEnabledPauseInListedAppsOnce,
-            hasAddedExternalPauseAppOnce = settings.hasAddedExternalPauseAppOnce,
-        )
-    }
-
-    fun restoreSettings(
-        preferences: BreakPreferences,
-        pauseInListedApps: Boolean,
-        monitoredApps: String,
-        autoStartOnBoot: Boolean,
-        appEnabled: Boolean,
-        overlayTransparencyPercent: Int,
-        overlayBackgroundPortraitUri: String,
-        overlayBackgroundLandscapeUri: String,
-        onboardingCompleted: Boolean,
-        excludeFromRecents: Boolean,
-        persistentNotificationEnabled: Boolean,
-        persistentNotificationUpdateFrequencySeconds: Int,
-        persistentNotificationTitleTemplate: String,
-        persistentNotificationContentTemplate: String,
-        qsTileCountdownAsTitle: Boolean,
-        breakShowPostponeButton: Boolean,
-        breakShowTitle: Boolean,
-        breakShowCountdown: Boolean,
-        breakShowExitButton: Boolean,
-        breakExitPostponeSeconds: Int,
-        breakOverlayFadeInDurationMs: Int,
-        breakOverlayFadeOutDurationMs: Int,
-        themeMode: AppThemeMode,
-        hasVisitedSpecificAppsPage: Boolean,
-        hasEnabledPauseInListedAppsOnce: Boolean,
-        hasAddedExternalPauseAppOnce: Boolean,
-    ) {
-        val current = _uiState.value
-        val isBreakCycleEnableUnlocked =
-            hasVisitedSpecificAppsPage && hasEnabledPauseInListedAppsOnce && hasAddedExternalPauseAppOnce
-        _uiState.value = current.copy(
-            preferences = preferences,
-            pauseInListedApps = pauseInListedApps,
-            monitoredApps = monitoredApps,
-            autoStartOnBoot = autoStartOnBoot,
-            appEnabled = appEnabled && isBreakCycleEnableUnlocked,
-            overlayTransparencyPercent = overlayTransparencyPercent.coerceIn(0, 100),
-            overlayBackgroundPortraitUri = overlayBackgroundPortraitUri,
-            overlayBackgroundLandscapeUri = overlayBackgroundLandscapeUri,
-            onboardingCompleted = onboardingCompleted,
-            excludeFromRecents = excludeFromRecents,
-            persistentNotificationEnabled = persistentNotificationEnabled,
-            persistentNotificationUpdateFrequencySeconds =
-                persistentNotificationUpdateFrequencySeconds.coerceIn(1, 600),
-            persistentNotificationTitleTemplate = persistentNotificationTitleTemplate,
-            persistentNotificationContentTemplate = persistentNotificationContentTemplate,
-            qsTileCountdownAsTitle = qsTileCountdownAsTitle,
-            breakShowPostponeButton = breakShowPostponeButton,
-            breakShowTitle = breakShowTitle,
-            breakShowCountdown = breakShowCountdown,
-            breakShowExitButton = breakShowExitButton,
-            breakExitPostponeSeconds = breakExitPostponeSeconds.coerceIn(1, 3600),
-            breakOverlayFadeInDurationMs = breakOverlayFadeInDurationMs.coerceIn(0, 5000),
-            breakOverlayFadeOutDurationMs = breakOverlayFadeOutDurationMs.coerceIn(0, 5000),
-            themeMode = themeMode,
-            hasVisitedSpecificAppsPage = hasVisitedSpecificAppsPage,
-            hasEnabledPauseInListedAppsOnce = hasEnabledPauseInListedAppsOnce,
-            hasAddedExternalPauseAppOnce = hasAddedExternalPauseAppOnce,
-            state = current.state.copy(
-                secondsToNextBreak = current.state.secondsToNextBreak.coerceAtMost(preferences.smallEvery)
-            )
-        )
+        _uiState.value = settings.applyToUiState(_uiState.value)
     }
 
 }

@@ -135,4 +135,8 @@
 
     <!-- 设置：从最近任务隐藏 -->
     <string name="settings_exclude_from_recents">在最近任务列表中隐藏应用</string>
+
+    <!-- 设置：启动和锁屏解锁行为 -->
+    <string name="settings_restore_enabled_state_on_start">启动时加载启用/禁用状态</string>
+    <string name="settings_reenable_on_screen_unlock">解锁后重新启用计时（若已关闭）</string>
 </resources>

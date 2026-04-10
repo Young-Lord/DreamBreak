@@ -4,6 +4,20 @@ import kotlin.math.max
 
 const val DEFAULT_TOP_FLASH_SECONDS = 8
 const val DEFAULT_PRE_BREAK_NOTIFICATION_SECONDS = 30
+
+// Field range constants
+const val FLASH_FOR_MIN = 1
+const val FLASH_FOR_MAX = 600
+const val PRE_BREAK_LEAD_SECONDS_MIN = 1
+const val PRE_BREAK_LEAD_SECONDS_MAX = 3600
+const val OVERLAY_TRANSPARENCY_MIN = 0
+const val OVERLAY_TRANSPARENCY_MAX = 100
+const val NOTIFICATION_FREQUENCY_MIN = 1
+const val NOTIFICATION_FREQUENCY_MAX = 600
+const val BREAK_EXIT_POSTPONE_MIN = 1
+const val BREAK_EXIT_POSTPONE_MAX = 3600
+const val OVERLAY_ANIMATION_DURATION_MIN = 0
+const val OVERLAY_ANIMATION_DURATION_MAX = 5000
 const val DEFAULT_TOP_FLASH_SMALL_TEXT = "Break is coming, please wrap up"
 const val DEFAULT_TOP_FLASH_BIG_TEXT = "Big break is coming, please wrap up"
 const val DEFAULT_PRE_BREAK_SMALL_TITLE = "Small break is coming"

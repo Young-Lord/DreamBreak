@@ -26,11 +26,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import moe.lyniko.dreambreak.MainActivity
 import moe.lyniko.dreambreak.R
+import moe.lyniko.dreambreak.core.BREAK_EXIT_POSTPONE_MAX
+import moe.lyniko.dreambreak.core.BREAK_EXIT_POSTPONE_MIN
 import moe.lyniko.dreambreak.core.BreakPhase
 import moe.lyniko.dreambreak.core.BreakPreferences
 import moe.lyniko.dreambreak.core.BreakRuntime
 import moe.lyniko.dreambreak.core.BreakState
 import moe.lyniko.dreambreak.core.DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE
+import moe.lyniko.dreambreak.core.NOTIFICATION_FREQUENCY_MAX
+import moe.lyniko.dreambreak.core.NOTIFICATION_FREQUENCY_MIN
+import moe.lyniko.dreambreak.core.PRE_BREAK_LEAD_SECONDS_MAX
+import moe.lyniko.dreambreak.core.PRE_BREAK_LEAD_SECONDS_MIN
 import moe.lyniko.dreambreak.core.DEFAULT_PRE_BREAK_BIG_CONTENT
 import moe.lyniko.dreambreak.core.DEFAULT_PRE_BREAK_BIG_TITLE
 import moe.lyniko.dreambreak.core.DEFAULT_PRE_BREAK_SMALL_CONTENT
@@ -183,7 +189,7 @@ class BreakReminderService : Service() {
         titleTemplate: String,
         contentTemplate: String,
     ) {
-        val safeIntervalSeconds = normalModeUpdateIntervalSeconds.coerceIn(1, 600)
+        val safeIntervalSeconds = normalModeUpdateIntervalSeconds.coerceIn(NOTIFICATION_FREQUENCY_MIN, NOTIFICATION_FREQUENCY_MAX)
         val nowElapsedRealtimeMs = SystemClock.elapsedRealtime()
         if (!shouldNotify(state, preferences, safeIntervalSeconds, titleTemplate, contentTemplate, nowElapsedRealtimeMs)) {
             return
@@ -270,7 +276,7 @@ class BreakReminderService : Service() {
     ) {
         lastNotifiedState = state
         lastNotifiedPreferences = preferences
-        lastNotifiedNormalModeIntervalSeconds = normalModeUpdateIntervalSeconds.coerceIn(1, 600)
+        lastNotifiedNormalModeIntervalSeconds = normalModeUpdateIntervalSeconds.coerceIn(NOTIFICATION_FREQUENCY_MIN, NOTIFICATION_FREQUENCY_MAX)
         lastNotifiedTitleTemplate = titleTemplate
         lastNotifiedContentTemplate = contentTemplate
         lastNotificationElapsedRealtimeMs = atElapsedRealtimeMs
@@ -291,7 +297,7 @@ class BreakReminderService : Service() {
             return
         }
 
-        val leadSeconds = preferences.preBreakNotificationLeadSeconds.coerceIn(1, 3600)
+        val leadSeconds = preferences.preBreakNotificationLeadSeconds.coerceIn(PRE_BREAK_LEAD_SECONDS_MIN, PRE_BREAK_LEAD_SECONDS_MAX)
         val secondsToNextBreak = state.secondsToNextBreak.coerceAtLeast(0)
         val nextCycle = state.breakCycleCount + 1
         if (secondsToNextBreak == 0 || secondsToNextBreak > leadSeconds) {

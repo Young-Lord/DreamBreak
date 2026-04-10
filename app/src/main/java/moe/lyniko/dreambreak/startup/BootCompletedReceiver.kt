@@ -30,34 +30,7 @@ class BootCompletedReceiver : BroadcastReceiver() {
             runCatching {
                 val appContext = context.applicationContext
                 val settings = SettingsStore(appContext).settingsFlow.first()
-                BreakRuntime.restoreSettings(
-                    preferences = settings.preferences,
-                    pauseInListedApps = settings.pauseInListedApps,
-                    monitoredApps = settings.monitoredApps,
-                    autoStartOnBoot = settings.autoStartOnBoot,
-                    appEnabled = settings.appEnabled,
-                    overlayTransparencyPercent = settings.overlayTransparencyPercent,
-                    overlayBackgroundPortraitUri = settings.overlayBackgroundPortraitUri,
-                    overlayBackgroundLandscapeUri = settings.overlayBackgroundLandscapeUri,
-                    onboardingCompleted = settings.onboardingCompleted,
-                    excludeFromRecents = settings.excludeFromRecents,
-                    persistentNotificationEnabled = settings.persistentNotificationEnabled,
-                    persistentNotificationUpdateFrequencySeconds = settings.persistentNotificationUpdateFrequencySeconds,
-                    persistentNotificationTitleTemplate = settings.persistentNotificationTitleTemplate,
-                    persistentNotificationContentTemplate = settings.persistentNotificationContentTemplate,
-                    qsTileCountdownAsTitle = settings.qsTileCountdownAsTitle,
-                    breakShowPostponeButton = settings.breakShowPostponeButton,
-                    breakShowTitle = settings.breakShowTitle,
-                    breakShowCountdown = settings.breakShowCountdown,
-                    breakShowExitButton = settings.breakShowExitButton,
-                    breakExitPostponeSeconds = settings.breakExitPostponeSeconds,
-                    breakOverlayFadeInDurationMs = settings.breakOverlayFadeInDurationMs,
-                    breakOverlayFadeOutDurationMs = settings.breakOverlayFadeOutDurationMs,
-                    themeMode = settings.themeMode,
-                    hasVisitedSpecificAppsPage = settings.hasVisitedSpecificAppsPage,
-                    hasEnabledPauseInListedAppsOnce = settings.hasEnabledPauseInListedAppsOnce,
-                    hasAddedExternalPauseAppOnce = settings.hasAddedExternalPauseAppOnce,
-                )
+                BreakRuntime.restoreSettings(settings)
                 val effectiveAppEnabled = BreakRuntime.uiState.value.appEnabled
                 val shouldStartRuntime = when (action) {
                     Intent.ACTION_MY_PACKAGE_REPLACED -> effectiveAppEnabled

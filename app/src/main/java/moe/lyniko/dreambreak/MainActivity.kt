@@ -105,7 +105,10 @@ import moe.lyniko.dreambreak.core.BreakPreferences
 import moe.lyniko.dreambreak.core.BreakRuntime
 import moe.lyniko.dreambreak.core.BreakState
 import moe.lyniko.dreambreak.core.DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE
+import moe.lyniko.dreambreak.core.OVERLAY_TRANSPARENCY_MAX
+import moe.lyniko.dreambreak.core.OVERLAY_TRANSPARENCY_MIN
 import moe.lyniko.dreambreak.core.SessionMode
+import moe.lyniko.dreambreak.core.toAppSettings
 import moe.lyniko.dreambreak.core.formatPostponeDurations
 import moe.lyniko.dreambreak.core.normalizePostponeDurationInput
 import moe.lyniko.dreambreak.core.parsePostponeDurations
@@ -255,66 +258,11 @@ fun DreamBreakApp() {
         AppPauseMonitor.start(context.applicationContext)
     }
 
-    LaunchedEffect(
-        uiState.preferences,
-        uiState.pauseInListedApps,
-        uiState.monitoredApps,
-        uiState.autoStartOnBoot,
-        uiState.appEnabled,
-        uiState.overlayTransparencyPercent,
-        uiState.overlayBackgroundPortraitUri,
-        uiState.overlayBackgroundLandscapeUri,
-        uiState.onboardingCompleted,
-        uiState.excludeFromRecents,
-        uiState.persistentNotificationEnabled,
-        uiState.persistentNotificationUpdateFrequencySeconds,
-        uiState.persistentNotificationTitleTemplate,
-        uiState.persistentNotificationContentTemplate,
-        uiState.qsTileCountdownAsTitle,
-        uiState.breakShowPostponeButton,
-        uiState.breakShowTitle,
-        uiState.breakShowCountdown,
-        uiState.breakShowExitButton,
-        uiState.breakExitPostponeSeconds,
-        uiState.breakOverlayFadeInDurationMs,
-        uiState.breakOverlayFadeOutDurationMs,
-        uiState.themeMode,
-        settingsLoaded,
-    ) {
+    LaunchedEffect(uiState, settingsLoaded) {
         if (!settingsLoaded) {
             return@LaunchedEffect
         }
-
-        settingsStore.save(
-            AppSettings(
-                preferences = uiState.preferences,
-                pauseInListedApps = uiState.pauseInListedApps,
-                monitoredApps = uiState.monitoredApps,
-                autoStartOnBoot = uiState.autoStartOnBoot,
-                appEnabled = uiState.appEnabled,
-                overlayTransparencyPercent = uiState.overlayTransparencyPercent,
-                overlayBackgroundPortraitUri = uiState.overlayBackgroundPortraitUri,
-                overlayBackgroundLandscapeUri = uiState.overlayBackgroundLandscapeUri,
-                onboardingCompleted = uiState.onboardingCompleted,
-                excludeFromRecents = uiState.excludeFromRecents,
-                persistentNotificationEnabled = uiState.persistentNotificationEnabled,
-                persistentNotificationUpdateFrequencySeconds = uiState.persistentNotificationUpdateFrequencySeconds,
-                persistentNotificationTitleTemplate = uiState.persistentNotificationTitleTemplate,
-                persistentNotificationContentTemplate = uiState.persistentNotificationContentTemplate,
-                qsTileCountdownAsTitle = uiState.qsTileCountdownAsTitle,
-                breakShowPostponeButton = uiState.breakShowPostponeButton,
-                breakShowTitle = uiState.breakShowTitle,
-                breakShowCountdown = uiState.breakShowCountdown,
-                breakShowExitButton = uiState.breakShowExitButton,
-                breakExitPostponeSeconds = uiState.breakExitPostponeSeconds,
-                breakOverlayFadeInDurationMs = uiState.breakOverlayFadeInDurationMs,
-                breakOverlayFadeOutDurationMs = uiState.breakOverlayFadeOutDurationMs,
-                themeMode = uiState.themeMode,
-                hasVisitedSpecificAppsPage = uiState.hasVisitedSpecificAppsPage,
-                hasEnabledPauseInListedAppsOnce = uiState.hasEnabledPauseInListedAppsOnce,
-                hasAddedExternalPauseAppOnce = uiState.hasAddedExternalPauseAppOnce,
-            )
-        )
+        settingsStore.save(uiState.toAppSettings())
     }
 
     LaunchedEffect(settingsLoaded, uiState.persistentNotificationEnabled, uiState.appEnabled) {
@@ -406,6 +354,8 @@ fun DreamBreakApp() {
                             hasUsageAccess = hasUsageAccess,
                             installedApps = installedApps,
                             autoStartOnBoot = uiState.autoStartOnBoot,
+                            restoreEnabledStateOnStart = uiState.restoreEnabledStateOnStart,
+                            reenableOnScreenUnlock = uiState.reenableOnScreenUnlock,
                             overlayTransparencyPercent = uiState.overlayTransparencyPercent,
                             overlayBackgroundPortraitUri = uiState.overlayBackgroundPortraitUri,
                             overlayBackgroundLandscapeUri = uiState.overlayBackgroundLandscapeUri,
@@ -456,6 +406,8 @@ fun DreamBreakApp() {
                                 )
                             },
                             onAutoStartOnBootChange = { BreakRuntime.setAutoStartOnBoot(it) },
+                            onRestoreEnabledStateOnStartChange = { BreakRuntime.setRestoreEnabledStateOnStart(it) },
+                            onReenableOnScreenUnlockChange = { BreakRuntime.setReenableOnScreenUnlock(it) },
                             onOverlayTransparencyPercentChange = { BreakRuntime.setOverlayTransparencyPercent(it) },
                             onPickOverlayPortraitImage = {
                                 overlayPickerTarget = OverlayImageTarget.PORTRAIT
@@ -923,6 +875,8 @@ private fun SettingsPage(
     hasUsageAccess: Boolean,
     installedApps: List<InstalledApp>,
     autoStartOnBoot: Boolean,
+    restoreEnabledStateOnStart: Boolean,
+    reenableOnScreenUnlock: Boolean,
     overlayTransparencyPercent: Int,
     overlayBackgroundPortraitUri: String,
     overlayBackgroundLandscapeUri: String,
@@ -944,6 +898,8 @@ private fun SettingsPage(
     onPauseInListedAppsChange: (Boolean) -> Unit,
     onMonitoredAppsChange: (String) -> Unit,
     onAutoStartOnBootChange: (Boolean) -> Unit,
+    onRestoreEnabledStateOnStartChange: (Boolean) -> Unit,
+    onReenableOnScreenUnlockChange: (Boolean) -> Unit,
     onOverlayTransparencyPercentChange: (Int) -> Unit,
     onPickOverlayPortraitImage: () -> Unit,
     onPickOverlayLandscapeImage: () -> Unit,
@@ -1454,6 +1410,14 @@ private fun SettingsPage(
             Switch(checked = autoStartOnBoot, onCheckedChange = onAutoStartOnBootChange)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.settings_restore_enabled_state_on_start), modifier = Modifier.weight(1f))
+            Switch(checked = restoreEnabledStateOnStart, onCheckedChange = onRestoreEnabledStateOnStartChange)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.settings_reenable_on_screen_unlock), modifier = Modifier.weight(1f))
+            Switch(checked = reenableOnScreenUnlock, onCheckedChange = onReenableOnScreenUnlockChange)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.settings_exclude_from_recents), modifier = Modifier.weight(1f))
             Switch(checked = excludeFromRecents, onCheckedChange = onExcludeFromRecentsChange)
         }
@@ -1525,7 +1489,7 @@ private fun PercentageSliderField(
     value: Int,
     onValueChange: (Int) -> Unit,
 ) {
-    val safeValue = value.coerceIn(0, 100)
+    val safeValue = value.coerceIn(OVERLAY_TRANSPARENCY_MIN, OVERLAY_TRANSPARENCY_MAX)
 
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(
@@ -1548,7 +1512,7 @@ private fun PercentageSliderField(
         Slider(
             value = safeValue.toFloat(),
             onValueChange = { sliderValue ->
-                onValueChange(sliderValue.roundToInt().coerceIn(0, 100))
+                onValueChange(sliderValue.roundToInt().coerceIn(OVERLAY_TRANSPARENCY_MIN, OVERLAY_TRANSPARENCY_MAX))
             },
             valueRange = 0f..100f,
             steps = 99,
