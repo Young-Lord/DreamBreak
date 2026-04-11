@@ -248,8 +248,10 @@ fun DreamBreakApp() {
     }
 
     LaunchedEffect(settingsStore) {
+        var isFirstLoad = true
         settingsStore.settingsFlow.collect { settings ->
-            BreakRuntime.restoreSettings(settings)
+            BreakRuntime.restoreSettings(settings, isFirstLoad = isFirstLoad)
+            isFirstLoad = false
             settingsLoaded = true
         }
     }

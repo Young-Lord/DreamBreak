@@ -51,14 +51,15 @@ private fun BreakUiState.isBreakCycleEnableUnlocked(): Boolean {
         hasAddedExternalPauseAppOnce
 }
 
-fun AppSettings.applyToUiState(current: BreakUiState): BreakUiState {
+fun AppSettings.applyToUiState(current: BreakUiState, isFirstLoad: Boolean = false): BreakUiState {
     val isBreakCycleEnableUnlocked =
         hasVisitedSpecificAppsPage && hasEnabledPauseInListedAppsOnce && hasAddedExternalPauseAppOnce
-    // If restoreEnabledStateOnStart is false (default), always start enabled (ignore stored disabled state)
-    val effectiveAppEnabled = if (restoreEnabledStateOnStart) {
-        appEnabled && isBreakCycleEnableUnlocked
-    } else {
+    // On first load with restoreEnabledStateOnStart=false: force-enable (ignore stored disabled state).
+    // All other cases: use stored appEnabled value (original behavior).
+    val effectiveAppEnabled = if (isFirstLoad && !restoreEnabledStateOnStart) {
         isBreakCycleEnableUnlocked
+    } else {
+        appEnabled && isBreakCycleEnableUnlocked
     }
     return current.copy(
         preferences = preferences,
@@ -434,8 +435,8 @@ object BreakRuntime {
         }
     }
 
-    fun restoreSettings(settings: AppSettings) {
-        _uiState.value = settings.applyToUiState(_uiState.value)
+    fun restoreSettings(settings: AppSettings, isFirstLoad: Boolean = false) {
+        _uiState.value = settings.applyToUiState(_uiState.value, isFirstLoad = isFirstLoad)
     }
 
 }
