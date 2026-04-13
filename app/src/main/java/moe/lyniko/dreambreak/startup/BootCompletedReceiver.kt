@@ -12,6 +12,7 @@ import moe.lyniko.dreambreak.MainActivity
 import moe.lyniko.dreambreak.core.BreakRuntime
 import moe.lyniko.dreambreak.data.SettingsStore
 import moe.lyniko.dreambreak.monitor.AppPauseMonitor
+import moe.lyniko.dreambreak.monitor.ScreenLockMonitor
 import moe.lyniko.dreambreak.notification.BreakReminderService
 
 class BootCompletedReceiver : BroadcastReceiver() {
@@ -40,6 +41,7 @@ class BootCompletedReceiver : BroadcastReceiver() {
                 if (shouldStartRuntime) {
                     BreakRuntime.start()
                     AppPauseMonitor.start(appContext)
+                    ScreenLockMonitor.start(appContext)
                 }
 
                 val shouldStartService = when (action) {

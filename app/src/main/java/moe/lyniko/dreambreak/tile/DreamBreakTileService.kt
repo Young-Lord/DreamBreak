@@ -24,6 +24,7 @@ import moe.lyniko.dreambreak.core.SessionMode
 import moe.lyniko.dreambreak.data.AppSettings
 import moe.lyniko.dreambreak.data.SettingsStore
 import moe.lyniko.dreambreak.monitor.AppPauseMonitor
+import moe.lyniko.dreambreak.monitor.ScreenLockMonitor
 import moe.lyniko.dreambreak.notification.BreakReminderService
 
 class DreamBreakTileService : TileService() {
@@ -73,6 +74,7 @@ class DreamBreakTileService : TileService() {
             if (effectiveEnabled) {
                 BreakRuntime.start()
                 AppPauseMonitor.start(appContext)
+                ScreenLockMonitor.start(appContext)
                 if (
                     currentSettings.persistentNotificationEnabled &&
                     MainActivity.hasNotificationPermission(appContext)
@@ -105,6 +107,7 @@ class DreamBreakTileService : TileService() {
             val settings = settingsStore.settingsFlow.first()
             applySettingsToRuntime(settings)
             BreakRuntime.start()
+            ScreenLockMonitor.start(applicationContext)
             val uiState = BreakRuntime.uiState.value
             updateTile(
                 appEnabled = uiState.appEnabled,

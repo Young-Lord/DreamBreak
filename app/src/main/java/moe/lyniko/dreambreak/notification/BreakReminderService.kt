@@ -49,19 +49,20 @@ import moe.lyniko.dreambreak.core.SessionMode
 import moe.lyniko.dreambreak.data.AppSettings
 import moe.lyniko.dreambreak.data.SettingsStore
 import moe.lyniko.dreambreak.monitor.AppPauseMonitor
-import moe.lyniko.dreambreak.monitor.ScreenLockReceiver
+import moe.lyniko.dreambreak.monitor.ScreenLockMonitor
 import moe.lyniko.dreambreak.overlay.BreakOverlayController
 
 class BreakReminderService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Main.immediate)
     private var observeJob: Job? = null
     private lateinit var overlayController: BreakOverlayController
-    private lateinit var screenLockReceiver: ScreenLockReceiver
     private var lastNotifiedState: BreakState? = null
     private var lastNotifiedPreferences: BreakPreferences? = null
     private var lastNotifiedNormalModeIntervalSeconds: Int = DEFAULT_NORMAL_MODE_UPDATE_SECONDS
     private var lastNotifiedTitleTemplate: String = DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE
     private var lastNotifiedContentTemplate: String = ""
+    private var lastNotifiedRenderedTitle: String = ""
+    private var lastNotifiedRenderedContent: String = ""
     private var lastNotificationElapsedRealtimeMs: Long = 0L
     private var lastPreBreakNotifiedCycle: Int = -1
     private var settingsRestoredFromDisk = false
@@ -71,13 +72,13 @@ class BreakReminderService : Service() {
         BreakRuntime.start()
         AppPauseMonitor.start(applicationContext)
         ensureChannel()
+        startInitialForegroundIfNeeded()
         overlayController = BreakOverlayController(
             this,
             onExitBreak = { seconds -> BreakRuntime.postponeBreakForSeconds(seconds) },
             onPostponeBreak = { seconds -> BreakRuntime.postponeBreakForSeconds(seconds) },
         )
-        screenLockReceiver = ScreenLockReceiver()
-        registerReceiver(screenLockReceiver, ScreenLockReceiver.intentFilter())
+        ScreenLockMonitor.start(applicationContext)
         observeJob = scope.launch {
             BreakRuntime.uiState.collectLatest { uiState ->
                 val hasPermission = MainActivity.hasNotificationPermission(this@BreakReminderService)
@@ -139,27 +140,22 @@ class BreakReminderService : Service() {
             return START_NOT_STICKY
         }
 
-        val notification = buildNotification(
+        val notificationContent = resolvePersistentNotificationContent(
             state = uiState.state,
             preferences = uiState.preferences,
             titleTemplate = uiState.persistentNotificationTitleTemplate,
             contentTemplate = uiState.persistentNotificationContentTemplate,
         )
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(
-                NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
-            )
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
-        }
+        val notification = buildNotification(notificationContent)
+        startForegroundInternal(notification)
         recordNotified(
             state = uiState.state,
             preferences = uiState.preferences,
             normalModeUpdateIntervalSeconds = uiState.persistentNotificationUpdateFrequencySeconds,
             titleTemplate = uiState.persistentNotificationTitleTemplate,
             contentTemplate = uiState.persistentNotificationContentTemplate,
+            renderedTitle = notificationContent.title,
+            renderedContent = notificationContent.content,
             atElapsedRealtimeMs = SystemClock.elapsedRealtime(),
         )
         return START_STICKY
@@ -173,7 +169,6 @@ class BreakReminderService : Service() {
     override fun onDestroy() {
         scheduleRestartIfNeeded()
         observeJob?.cancel()
-        unregisterReceiver(screenLockReceiver)
         overlayController.release()
         NotificationManagerCompat.from(this).cancel(PRE_BREAK_NOTIFICATION_ID)
         scope.cancel()
@@ -191,7 +186,24 @@ class BreakReminderService : Service() {
     ) {
         val safeIntervalSeconds = normalModeUpdateIntervalSeconds.coerceIn(NOTIFICATION_FREQUENCY_MIN, NOTIFICATION_FREQUENCY_MAX)
         val nowElapsedRealtimeMs = SystemClock.elapsedRealtime()
-        if (!shouldNotify(state, preferences, safeIntervalSeconds, titleTemplate, contentTemplate, nowElapsedRealtimeMs)) {
+        val content = resolvePersistentNotificationContent(
+            state = state,
+            preferences = preferences,
+            titleTemplate = titleTemplate,
+            contentTemplate = contentTemplate,
+        )
+        if (
+            !shouldNotify(
+                state = state,
+                preferences = preferences,
+                normalModeUpdateIntervalSeconds = safeIntervalSeconds,
+                titleTemplate = titleTemplate,
+                contentTemplate = contentTemplate,
+                renderedTitle = content.title,
+                renderedContent = content.content,
+                nowElapsedRealtimeMs = nowElapsedRealtimeMs,
+            )
+        ) {
             return
         }
 
@@ -199,10 +211,7 @@ class BreakReminderService : Service() {
             .notify(
                 NOTIFICATION_ID,
                 buildNotification(
-                    state = state,
-                    preferences = preferences,
-                    titleTemplate = titleTemplate,
-                    contentTemplate = contentTemplate,
+                    content = content,
                 )
             )
         recordNotified(
@@ -211,6 +220,8 @@ class BreakReminderService : Service() {
             normalModeUpdateIntervalSeconds = safeIntervalSeconds,
             titleTemplate = titleTemplate,
             contentTemplate = contentTemplate,
+            renderedTitle = content.title,
+            renderedContent = content.content,
             atElapsedRealtimeMs = nowElapsedRealtimeMs,
         )
     }
@@ -221,11 +232,19 @@ class BreakReminderService : Service() {
         normalModeUpdateIntervalSeconds: Int,
         titleTemplate: String,
         contentTemplate: String,
+        renderedTitle: String,
+        renderedContent: String,
         nowElapsedRealtimeMs: Long,
     ): Boolean {
         val previousState = lastNotifiedState ?: return true
         val previousPreferences = lastNotifiedPreferences ?: return true
 
+        if (
+            lastNotifiedRenderedTitle == renderedTitle &&
+            lastNotifiedRenderedContent == renderedContent
+        ) {
+            return false
+        }
         if (previousPreferences != preferences) {
             return true
         }
@@ -272,6 +291,8 @@ class BreakReminderService : Service() {
         normalModeUpdateIntervalSeconds: Int,
         titleTemplate: String,
         contentTemplate: String,
+        renderedTitle: String,
+        renderedContent: String,
         atElapsedRealtimeMs: Long,
     ) {
         lastNotifiedState = state
@@ -279,6 +300,8 @@ class BreakReminderService : Service() {
         lastNotifiedNormalModeIntervalSeconds = normalModeUpdateIntervalSeconds.coerceIn(NOTIFICATION_FREQUENCY_MIN, NOTIFICATION_FREQUENCY_MAX)
         lastNotifiedTitleTemplate = titleTemplate
         lastNotifiedContentTemplate = contentTemplate
+        lastNotifiedRenderedTitle = renderedTitle
+        lastNotifiedRenderedContent = renderedContent
         lastNotificationElapsedRealtimeMs = atElapsedRealtimeMs
     }
 
@@ -365,25 +388,20 @@ class BreakReminderService : Service() {
         titleTemplate: String,
         contentTemplate: String,
     ): android.app.Notification {
-        val nextBreakType = if (isNextBreakBig(state, preferences)) {
-            getString(R.string.break_type_big)
-        } else {
-            getString(R.string.break_type_small)
-        }
-        val secondsUntilNextBreak = secondsUntilNextBreak(state, preferences)
-        val timeToNextBreak = formatSeconds(secondsUntilNextBreak)
-        val title = applyPersistentNotificationTemplate(
-            template = titleTemplate.ifBlank { DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE },
+        val content = resolvePersistentNotificationContent(
             state = state,
-            nextBreakType = nextBreakType,
-            timeToNextBreak = timeToNextBreak,
+            preferences = preferences,
+            titleTemplate = titleTemplate,
+            contentTemplate = contentTemplate,
         )
-        val content = applyPersistentNotificationTemplate(
-            template = contentTemplate,
-            state = state,
-            nextBreakType = nextBreakType,
-            timeToNextBreak = timeToNextBreak,
-        )
+        return buildNotification(content)
+    }
+
+    private fun buildNotification(
+        content: PersistentNotificationContent,
+    ): android.app.Notification {
+        val title = content.title
+        val body = content.content
 
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
@@ -409,13 +427,44 @@ class BreakReminderService : Service() {
             )
             .setPriority(NotificationCompat.PRIORITY_LOW)
 
-        if (content.isNotBlank()) {
+        if (body.isNotBlank()) {
             builder
-                .setContentText(content)
-                .setStyle(NotificationCompat.BigTextStyle().bigText(content))
+                .setContentText(body)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(body))
         }
 
         return builder.build()
+    }
+
+    private fun resolvePersistentNotificationContent(
+        state: BreakState,
+        preferences: BreakPreferences,
+        titleTemplate: String,
+        contentTemplate: String,
+    ): PersistentNotificationContent {
+        val nextBreakType = if (isNextBreakBig(state, preferences)) {
+            getString(R.string.break_type_big)
+        } else {
+            getString(R.string.break_type_small)
+        }
+        val secondsUntilNextBreak = secondsUntilNextBreak(state, preferences)
+        val timeToNextBreak = formatSeconds(secondsUntilNextBreak)
+        val title = applyPersistentNotificationTemplate(
+            template = titleTemplate.ifBlank { DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE },
+            state = state,
+            nextBreakType = nextBreakType,
+            timeToNextBreak = timeToNextBreak,
+        )
+        val content = applyPersistentNotificationTemplate(
+            template = contentTemplate,
+            state = state,
+            nextBreakType = nextBreakType,
+            timeToNextBreak = timeToNextBreak,
+        )
+        return PersistentNotificationContent(
+            title = title,
+            content = content,
+        )
     }
 
     private fun applyPersistentNotificationTemplate(
@@ -503,6 +552,29 @@ class BreakReminderService : Service() {
         manager.createNotificationChannel(preBreakChannel)
     }
 
+    private fun startInitialForegroundIfNeeded() {
+        val uiState = BreakRuntime.uiState.value
+        val notification = buildNotification(
+            state = uiState.state,
+            preferences = uiState.preferences,
+            titleTemplate = uiState.persistentNotificationTitleTemplate,
+            contentTemplate = uiState.persistentNotificationContentTemplate,
+        )
+        startForegroundInternal(notification)
+    }
+
+    private fun startForegroundInternal(notification: android.app.Notification) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(
+                NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
+            )
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+        }
+    }
+
     private fun ensureRuntimeSettingsLoaded() {
         if (settingsRestoredFromDisk) {
             return
@@ -555,6 +627,11 @@ class BreakReminderService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
     }
+
+    private data class PersistentNotificationContent(
+        val title: String,
+        val content: String,
+    )
 
     companion object {
         const val CHANNEL_ID = "dream_break_reminder"

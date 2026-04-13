@@ -54,12 +54,12 @@ private fun BreakUiState.isBreakCycleEnableUnlocked(): Boolean {
 fun AppSettings.applyToUiState(current: BreakUiState, isFirstLoad: Boolean = false): BreakUiState {
     val isBreakCycleEnableUnlocked =
         hasVisitedSpecificAppsPage && hasEnabledPauseInListedAppsOnce && hasAddedExternalPauseAppOnce
-    // On first load with restoreEnabledStateOnStart=false: force-enable (ignore stored disabled state).
-    // All other cases: use stored appEnabled value (original behavior).
-    val effectiveAppEnabled = if (isFirstLoad && !restoreEnabledStateOnStart) {
-        isBreakCycleEnableUnlocked
-    } else {
-        appEnabled && isBreakCycleEnableUnlocked
+    // When restoreEnabledStateOnStart is disabled, only the first load decides initial enable state.
+    // Afterwards keep runtime appEnabled to avoid disk synchronization races overriding live state.
+    val effectiveAppEnabled = when {
+        isFirstLoad && !restoreEnabledStateOnStart -> isBreakCycleEnableUnlocked
+        !restoreEnabledStateOnStart -> current.appEnabled && isBreakCycleEnableUnlocked
+        else -> appEnabled && isBreakCycleEnableUnlocked
     }
     return current.copy(
         preferences = preferences,
@@ -420,7 +420,8 @@ object BreakRuntime {
                 active = false,
                 preferences = current.preferences,
             )
-            _uiState.value = if (shouldReenable && current.isBreakCycleEnableUnlocked()) {
+            val canReenable = current.isBreakCycleEnableUnlocked()
+            _uiState.value = if (shouldReenable && canReenable) {
                 current.copy(
                     appEnabled = true,
                     state = if (stateAfterUnlock.secondsToNextBreak <= 0) {
@@ -436,7 +437,9 @@ object BreakRuntime {
     }
 
     fun restoreSettings(settings: AppSettings, isFirstLoad: Boolean = false) {
-        _uiState.value = settings.applyToUiState(_uiState.value, isFirstLoad = isFirstLoad)
+        val current = _uiState.value
+        val restored = settings.applyToUiState(current, isFirstLoad = isFirstLoad)
+        _uiState.value = restored
     }
 
 }

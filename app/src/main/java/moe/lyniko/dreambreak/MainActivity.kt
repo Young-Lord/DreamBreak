@@ -119,6 +119,7 @@ import moe.lyniko.dreambreak.monitor.AppPauseMonitor
 import moe.lyniko.dreambreak.monitor.ForegroundAppMonitor
 import moe.lyniko.dreambreak.monitor.InstalledApp
 import moe.lyniko.dreambreak.monitor.InstalledAppsProvider
+import moe.lyniko.dreambreak.monitor.ScreenLockMonitor
 import moe.lyniko.dreambreak.monitor.shouldPauseForForegroundApp
 import moe.lyniko.dreambreak.notification.BreakReminderService
 import moe.lyniko.dreambreak.notification.PostponePickerActivity
@@ -258,6 +259,7 @@ fun DreamBreakApp() {
 
     LaunchedEffect(Unit) {
         AppPauseMonitor.start(context.applicationContext)
+        ScreenLockMonitor.start(context.applicationContext)
     }
 
     LaunchedEffect(uiState, settingsLoaded) {
