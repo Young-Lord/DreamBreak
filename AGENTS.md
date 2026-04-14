@@ -57,10 +57,13 @@ DreamBreak 维护指引（持续更新）
 - `DreamBreakTileService`：快捷开关入口，状态展示与点击切换。
 - 规则：这些入口只能“驱动 Runtime”，不要复制计时逻辑。
 
-### 2.6 UI（`MainActivity.kt` / `DreamBreakApp.kt`）
+### 2.6 UI（`MainActivity.kt` / `DreamBreakApp.kt` / `ui/`）
 
 - `MainActivity`：主题包装、`BreakRuntime.start()`、从多任务隐藏等；`companion` 提供悬浮窗/电池/通知设置跳转（供引导与其它模块调用）。
-- `DreamBreakApp.kt`：`DreamBreakApp`、首页/设置/引导与各输入子组件；设置加载、落盘与 `RuntimeBootstrap` 副作用集中在此。
+- `DreamBreakApp.kt`：根 Composable、导航壳、设置加载/落盘与 `RuntimeBootstrap` 副作用。
+- `ui/onboarding/OnboardingScreen.kt`：首次引导流程。
+- `ui/home/HomeScreen.kt`：首页与「下一次休息」推算辅助函数。
+- `ui/settings/SettingsScreen.kt`：设置页、应用多选子页、通用输入组件；`parsePackageList` 供根界面回调使用。
 
 ## 3. 关键状态与不变量
 
