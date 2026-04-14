@@ -7,7 +7,7 @@ DreamBreak 维护指引（持续更新）
 - 核心状态源：`BreakRuntime`（`StateFlow<BreakUiState>`）
 - 核心状态机：`BreakEngine`（纯函数推进 `BreakState`）
 - 数据持久化：`SettingsStore`（DataStore <-> `AppSettings`）
-- 前台入口：`MainActivity`（Compose UI）
+- 前台入口：`MainActivity`（主题与生命周期）+ `DreamBreakApp.kt`（Compose 主界面与各页）
 - 后台入口：`BreakReminderService`（前台服务 + 通知 + Overlay）
 - 系统入口：`BootCompletedReceiver` / `DreamBreakTileService` / `NotificationActionReceiver` / `ScreenLockReceiver`
 - 监控层：`AppPauseMonitor` + `ForegroundAppMonitor` + `ScreenLockMonitor`
@@ -56,6 +56,11 @@ DreamBreak 维护指引（持续更新）
 - `BootCompletedReceiver`：开机/升级后按设置恢复运行时和服务。
 - `DreamBreakTileService`：快捷开关入口，状态展示与点击切换。
 - 规则：这些入口只能“驱动 Runtime”，不要复制计时逻辑。
+
+### 2.6 UI（`MainActivity.kt` / `DreamBreakApp.kt`）
+
+- `MainActivity`：主题包装、`BreakRuntime.start()`、从多任务隐藏等；`companion` 提供悬浮窗/电池/通知设置跳转（供引导与其它模块调用）。
+- `DreamBreakApp.kt`：`DreamBreakApp`、首页/设置/引导与各输入子组件；设置加载、落盘与 `RuntimeBootstrap` 副作用集中在此。
 
 ## 3. 关键状态与不变量
 
