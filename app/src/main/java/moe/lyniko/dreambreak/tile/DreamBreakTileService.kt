@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import moe.lyniko.dreambreak.MainActivity
 import moe.lyniko.dreambreak.R
 import moe.lyniko.dreambreak.core.BreakPhase
 import moe.lyniko.dreambreak.core.BreakPreferences
@@ -23,9 +22,7 @@ import moe.lyniko.dreambreak.core.BreakState
 import moe.lyniko.dreambreak.core.SessionMode
 import moe.lyniko.dreambreak.data.AppSettings
 import moe.lyniko.dreambreak.data.SettingsStore
-import moe.lyniko.dreambreak.monitor.AppPauseMonitor
-import moe.lyniko.dreambreak.monitor.ScreenLockMonitor
-import moe.lyniko.dreambreak.notification.BreakReminderService
+import moe.lyniko.dreambreak.startup.RuntimeBootstrap
 
 class DreamBreakTileService : TileService() {
     private val scope = CoroutineScope(SupervisorJob() + Main.immediate)
@@ -72,18 +69,9 @@ class DreamBreakTileService : TileService() {
             settingsStore.save(currentSettings.copy(appEnabled = effectiveEnabled))
 
             if (effectiveEnabled) {
-                BreakRuntime.start()
-                AppPauseMonitor.start(appContext)
-                ScreenLockMonitor.start(appContext)
-                if (
-                    currentSettings.persistentNotificationEnabled &&
-                    MainActivity.hasNotificationPermission(appContext)
-                ) {
-                    BreakReminderService.start(appContext)
-                }
-            } else {
-                BreakReminderService.stop(appContext)
+                RuntimeBootstrap.startRuntimeAndMonitors(appContext)
             }
+            RuntimeBootstrap.syncReminderService(appContext)
 
             val uiState = BreakRuntime.uiState.value
             updateTile(
@@ -106,8 +94,11 @@ class DreamBreakTileService : TileService() {
         initializationJob = scope.launch {
             val settings = settingsStore.settingsFlow.first()
             applySettingsToRuntime(settings)
-            BreakRuntime.start()
-            ScreenLockMonitor.start(applicationContext)
+            RuntimeBootstrap.startRuntimeAndMonitors(
+                context = applicationContext,
+                startAppPauseMonitor = false,
+                startScreenLockMonitor = true,
+            )
             val uiState = BreakRuntime.uiState.value
             updateTile(
                 appEnabled = uiState.appEnabled,
@@ -181,7 +172,7 @@ class DreamBreakTileService : TileService() {
     }
 
     private fun applySettingsToRuntime(settings: AppSettings) {
-        BreakRuntime.restoreSettings(settings)
+        RuntimeBootstrap.applySettings(settings)
     }
 
     private fun updateTile(

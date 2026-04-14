@@ -124,6 +124,7 @@ import moe.lyniko.dreambreak.monitor.shouldPauseForForegroundApp
 import moe.lyniko.dreambreak.notification.BreakReminderService
 import moe.lyniko.dreambreak.notification.PostponePickerActivity
 import moe.lyniko.dreambreak.overlay.BreakOverlayController
+import moe.lyniko.dreambreak.startup.RuntimeBootstrap
 import moe.lyniko.dreambreak.ui.theme.DreamBreakTheme
 
 private const val OVERLAY_PREVIEW_AUTO_DISMISS_MS = 20_000L
@@ -251,7 +252,7 @@ fun DreamBreakApp() {
     LaunchedEffect(settingsStore) {
         var isFirstLoad = true
         settingsStore.settingsFlow.collect { settings ->
-            BreakRuntime.restoreSettings(settings, isFirstLoad = isFirstLoad)
+            RuntimeBootstrap.applySettings(settings, isFirstLoad = isFirstLoad)
             isFirstLoad = false
             settingsLoaded = true
         }
@@ -262,28 +263,20 @@ fun DreamBreakApp() {
         ScreenLockMonitor.start(context.applicationContext)
     }
 
-    LaunchedEffect(uiState, settingsLoaded) {
+    val persistableSettings = remember(uiState) { uiState.toAppSettings() }
+
+    LaunchedEffect(persistableSettings, settingsLoaded) {
         if (!settingsLoaded) {
             return@LaunchedEffect
         }
-        settingsStore.save(uiState.toAppSettings())
+        settingsStore.save(persistableSettings)
     }
 
     LaunchedEffect(settingsLoaded, uiState.persistentNotificationEnabled, uiState.appEnabled) {
         if (!settingsLoaded) {
             return@LaunchedEffect
         }
-
-        if (uiState.persistentNotificationEnabled && uiState.appEnabled) {
-            if (MainActivity.hasNotificationPermission(context)) {
-                BreakReminderService.start(context)
-            } else {
-                BreakRuntime.setPersistentNotificationEnabled(false)
-                BreakReminderService.stop(context)
-            }
-        } else {
-            BreakReminderService.stop(context)
-        }
+        RuntimeBootstrap.syncReminderService(context)
     }
 
     LaunchedEffect(settingsLoaded, uiState.excludeFromRecents) {

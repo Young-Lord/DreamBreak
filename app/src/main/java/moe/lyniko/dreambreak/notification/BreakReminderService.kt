@@ -51,6 +51,7 @@ import moe.lyniko.dreambreak.data.SettingsStore
 import moe.lyniko.dreambreak.monitor.AppPauseMonitor
 import moe.lyniko.dreambreak.monitor.ScreenLockMonitor
 import moe.lyniko.dreambreak.overlay.BreakOverlayController
+import moe.lyniko.dreambreak.startup.RuntimeBootstrap
 
 class BreakReminderService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Main.immediate)
@@ -590,7 +591,7 @@ class BreakReminderService : Service() {
     }
 
     private fun applySettingsToRuntime(settings: AppSettings) {
-        BreakRuntime.restoreSettings(settings)
+        RuntimeBootstrap.applySettings(settings)
     }
 
     private fun scheduleRestartIfNeeded() {

@@ -6,14 +6,8 @@ import android.content.Intent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import moe.lyniko.dreambreak.MainActivity
 import moe.lyniko.dreambreak.core.BreakRuntime
-import moe.lyniko.dreambreak.data.SettingsStore
-import moe.lyniko.dreambreak.monitor.AppPauseMonitor
-import moe.lyniko.dreambreak.monitor.ScreenLockMonitor
-import moe.lyniko.dreambreak.notification.BreakReminderService
 
 class BootCompletedReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
@@ -30,8 +24,7 @@ class BootCompletedReceiver : BroadcastReceiver() {
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             runCatching {
                 val appContext = context.applicationContext
-                val settings = SettingsStore(appContext).settingsFlow.first()
-                BreakRuntime.restoreSettings(settings)
+                val settings = RuntimeBootstrap.restoreFromDisk(appContext)
                 val effectiveAppEnabled = BreakRuntime.uiState.value.appEnabled
                 val shouldStartRuntime = when (action) {
                     Intent.ACTION_MY_PACKAGE_REPLACED -> effectiveAppEnabled
@@ -39,22 +32,8 @@ class BootCompletedReceiver : BroadcastReceiver() {
                 }
 
                 if (shouldStartRuntime) {
-                    BreakRuntime.start()
-                    AppPauseMonitor.start(appContext)
-                    ScreenLockMonitor.start(appContext)
-                }
-
-                val shouldStartService = when (action) {
-                    Intent.ACTION_MY_PACKAGE_REPLACED -> effectiveAppEnabled
-                    else -> settings.autoStartOnBoot && effectiveAppEnabled
-                }
-
-                if (
-                    shouldStartService &&
-                    settings.persistentNotificationEnabled &&
-                    MainActivity.hasNotificationPermission(appContext)
-                ) {
-                    BreakReminderService.start(appContext)
+                    RuntimeBootstrap.startRuntimeAndMonitors(appContext)
+                    RuntimeBootstrap.syncReminderService(appContext)
                 }
             }
             pendingResult.finish()

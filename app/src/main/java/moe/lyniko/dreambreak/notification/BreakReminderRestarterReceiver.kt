@@ -6,12 +6,8 @@ import android.content.Intent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import moe.lyniko.dreambreak.MainActivity
-import moe.lyniko.dreambreak.core.BreakRuntime
-import moe.lyniko.dreambreak.data.SettingsStore
-import moe.lyniko.dreambreak.monitor.AppPauseMonitor
+import moe.lyniko.dreambreak.startup.RuntimeBootstrap
 
 class BreakReminderRestarterReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
@@ -23,20 +19,9 @@ class BreakReminderRestarterReceiver : BroadcastReceiver() {
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             runCatching {
                 val appContext = context.applicationContext
-                val settings = SettingsStore(appContext).settingsFlow.first()
-                BreakRuntime.restoreSettings(settings)
-
-                val uiState = BreakRuntime.uiState.value
-                if (!uiState.appEnabled || !uiState.persistentNotificationEnabled) {
-                    return@runCatching
-                }
-                if (!MainActivity.hasNotificationPermission(appContext)) {
-                    return@runCatching
-                }
-
-                BreakRuntime.start()
-                AppPauseMonitor.start(appContext)
-                BreakReminderService.start(appContext)
+                RuntimeBootstrap.restoreFromDisk(appContext)
+                RuntimeBootstrap.startRuntimeAndMonitors(appContext)
+                RuntimeBootstrap.syncReminderService(appContext)
             }
             pendingResult.finish()
         }
