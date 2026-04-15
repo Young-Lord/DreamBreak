@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">护眼休息</string>
+    <string name="app_name">梦想封印</string>
     <string name="notification_channel_name">休息提醒</string>
     <string name="notification_channel_pre_break_name">休息前提醒</string>
     <string name="notification_title">护眼提醒已开启</string>
@@ -14,7 +14,7 @@
     <string name="nav_home">主页</string>
     <string name="nav_break">休息</string>
     <string name="nav_settings">设置</string>
-    <string name="qs_tile_label">护眼休息</string>
+    <string name="qs_tile_label">梦想封印</string>
     <string name="prompt_banner">即将进入休息，请尽快收尾</string>
     <string name="home_countdown">下次休息倒计时 %1$s</string>
     <string name="home_since_last">上次休息后已过 %1$s</string>
@@ -117,18 +117,18 @@
     <string name="phase_post">POST</string>
 
     <!-- 引导页 -->
-    <string name="onboarding_welcome_title">欢迎使用护眼休息</string>
+    <string name="onboarding_welcome_title">欢迎使用梦想封印</string>
     <string name="onboarding_welcome_desc">一款智能护眼提醒工具，帮助你养成健康的用眼习惯。它会定时提醒你休息眼睛，通过温和的遮盖提示引导你放松。</string>
     <string name="onboarding_overlay_title">悬浮窗权限</string>
-    <string name="onboarding_overlay_desc">护眼休息需要悬浮窗权限，才能在其他应用上方显示休息提醒。这是应用的核心功能。</string>
+    <string name="onboarding_overlay_desc">梦想封印需要悬浮窗权限，才能在其他应用上方显示休息提醒。这是应用的核心功能。</string>
     <string name="onboarding_overlay_granted">悬浮窗权限已授予</string>
     <string name="onboarding_overlay_btn">授予悬浮窗权限</string>
     <string name="onboarding_battery_title">电池优化</string>
-    <string name="onboarding_battery_desc">为确保休息提醒准时触发，请允许护眼休息不受电池优化限制。</string>
+    <string name="onboarding_battery_desc">为确保休息提醒准时触发，请允许梦想封印不受电池优化限制。</string>
     <string name="onboarding_battery_granted">已忽略电池优化</string>
     <string name="onboarding_battery_btn">关闭电池优化</string>
     <string name="onboarding_done_title">准备就绪！</string>
-    <string name="onboarding_done_desc">一切就绪。护眼休息将定时提醒你休息眼睛。你可以在设置中自定义间隔和行为。</string>
+    <string name="onboarding_done_desc">一切就绪。梦想封印将定时提醒你休息眼睛。你可以在设置中自定义间隔和行为。</string>
     <string name="onboarding_next">下一步</string>
     <string name="onboarding_back">上一步</string>
     <string name="onboarding_finish">开始使用</string>
