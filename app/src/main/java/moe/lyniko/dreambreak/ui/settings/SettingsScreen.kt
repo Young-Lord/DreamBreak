@@ -75,6 +75,10 @@ private const val BIG_AFTER_MAX_CYCLES = 20
 private const val BIG_FOR_MIN_SECONDS = 1
 private const val BIG_FOR_MAX_SECONDS = 3_600
 
+private const val BREAK_OVERLAY_FADE_DURATION_MIN_MS = 0
+private const val BREAK_OVERLAY_FADE_DURATION_MAX_MS = 40_000
+private const val BREAK_OVERLAY_FADE_DURATION_DEFAULT_MS = 300
+
 @Composable
 fun SettingsPage(
     preferences: BreakPreferences,
@@ -422,17 +426,17 @@ fun SettingsPage(
         NumberInputField(
             label = stringResource(R.string.settings_break_overlay_fade_in_duration_ms),
             value = breakOverlayFadeInDurationMs,
-            minValue = 0,
-            maxValue = 5000,
-            defaultValue = 300,
+            minValue = BREAK_OVERLAY_FADE_DURATION_MIN_MS,
+            maxValue = BREAK_OVERLAY_FADE_DURATION_MAX_MS,
+            defaultValue = BREAK_OVERLAY_FADE_DURATION_DEFAULT_MS,
             onValueChange = onBreakOverlayFadeInDurationMsChange,
         )
         NumberInputField(
             label = stringResource(R.string.settings_break_overlay_fade_out_duration_ms),
             value = breakOverlayFadeOutDurationMs,
-            minValue = 0,
-            maxValue = 5000,
-            defaultValue = 300,
+            minValue = BREAK_OVERLAY_FADE_DURATION_MIN_MS,
+            maxValue = BREAK_OVERLAY_FADE_DURATION_MAX_MS,
+            defaultValue = BREAK_OVERLAY_FADE_DURATION_DEFAULT_MS,
             onValueChange = onBreakOverlayFadeOutDurationMsChange,
         )
 
