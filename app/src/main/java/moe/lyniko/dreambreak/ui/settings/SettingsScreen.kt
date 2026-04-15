@@ -23,6 +23,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -675,7 +676,10 @@ private fun ThemeModeDropdownRow(
                         contentDescription = null,
                     )
                 },
-                modifier = Modifier.menuAnchor(),
+                modifier = Modifier.menuAnchor(
+                    type = MenuAnchorType.PrimaryNotEditable,
+                    enabled = true,
+                ),
             )
             DropdownMenu(
                 expanded = expanded,
