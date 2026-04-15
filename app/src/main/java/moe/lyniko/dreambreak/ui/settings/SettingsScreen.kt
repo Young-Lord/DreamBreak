@@ -65,6 +65,15 @@ import moe.lyniko.dreambreak.notification.BreakReminderService
 import moe.lyniko.dreambreak.overlay.BreakOverlayController
 
 private const val OVERLAY_PREVIEW_AUTO_DISMISS_MS = 20_000L
+private const val SMALL_EVERY_MIN_SECONDS = 60
+private const val SMALL_EVERY_MAX_SECONDS = 43_200
+private const val SMALL_FOR_MIN_SECONDS = 1
+private const val SMALL_FOR_MAX_SECONDS = 1_800
+
+private const val BIG_AFTER_MIN_CYCLES = 1
+private const val BIG_AFTER_MAX_CYCLES = 20
+private const val BIG_FOR_MIN_SECONDS = 1
+private const val BIG_FOR_MAX_SECONDS = 3_600
 
 @Composable
 fun SettingsPage(
@@ -290,16 +299,16 @@ fun SettingsPage(
         NumberInputField(
             label = stringResource(R.string.settings_small_every),
             value = preferences.smallEvery,
-            minValue = 60,
-            maxValue = 43200,
+            minValue = SMALL_EVERY_MIN_SECONDS,
+            maxValue = SMALL_EVERY_MAX_SECONDS,
             defaultValue = defaultPreferences.smallEvery,
             onValueChange = { onPreferencesChange(preferences.copy(smallEvery = it)) },
         )
         NumberInputField(
             label = stringResource(R.string.settings_small_for),
             value = preferences.smallFor,
-            minValue = 5,
-            maxValue = 1800,
+            minValue = SMALL_FOR_MIN_SECONDS,
+            maxValue = SMALL_FOR_MAX_SECONDS,
             defaultValue = defaultPreferences.smallFor,
             onValueChange = { onPreferencesChange(preferences.copy(smallFor = it)) },
         )
@@ -321,16 +330,16 @@ fun SettingsPage(
             NumberInputField(
                 label = stringResource(R.string.settings_big_after),
                 value = preferences.bigAfter,
-                minValue = 1,
-                maxValue = 20,
+                minValue = BIG_AFTER_MIN_CYCLES,
+                maxValue = BIG_AFTER_MAX_CYCLES,
                 defaultValue = defaultPreferences.bigAfter,
                 onValueChange = { onPreferencesChange(preferences.copy(bigAfter = it)) },
             )
             NumberInputField(
                 label = stringResource(R.string.settings_big_for),
                 value = preferences.bigFor,
-                minValue = 10,
-                maxValue = 3600,
+                minValue = BIG_FOR_MIN_SECONDS,
+                maxValue = BIG_FOR_MAX_SECONDS,
                 defaultValue = defaultPreferences.bigFor,
                 onValueChange = { onPreferencesChange(preferences.copy(bigFor = it)) },
             )
