@@ -34,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -880,25 +881,27 @@ private fun AppSelectionSection(
     )
 
     filteredApps.forEach { app ->
-        val checked = selectedPackages.contains(app.packageName)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = app.label)
-                Text(text = app.packageName, style = MaterialTheme.typography.bodySmall)
-            }
-            Switch(
-                checked = checked,
-                onCheckedChange = { selected ->
-                    val updated = selectedPackages.toMutableSet().apply {
-                        if (selected) add(app.packageName) else remove(app.packageName)
-                    }
-                    onMonitoredAppsChange(updated.sorted().joinToString(","))
+        key(app.packageName) {
+            val checked = selectedPackages.contains(app.packageName)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = app.label)
+                    Text(text = app.packageName, style = MaterialTheme.typography.bodySmall)
                 }
-            )
+                Switch(
+                    checked = checked,
+                    onCheckedChange = { selected ->
+                        val updated = selectedPackages.toMutableSet().apply {
+                            if (selected) add(app.packageName) else remove(app.packageName)
+                        }
+                        onMonitoredAppsChange(updated.sorted().joinToString(","))
+                    }
+                )
+            }
         }
     }
 }
