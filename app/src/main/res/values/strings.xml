@@ -77,9 +77,16 @@
     <string name="settings_break_overlay_fade_in_duration_ms">Overlay fade-in animation (ms, 0 disables)</string>
     <string name="settings_break_overlay_fade_out_duration_ms">Overlay fade-out animation (ms, 0 disables)</string>
     <string name="settings_pause_selected_apps">Pause timer in selected apps</string>
+    <string name="settings_pause_app_list_enabled_whitelist">Pause timer in selected apps</string>
+    <string name="settings_pause_app_list_enabled_blacklist">Run timer only in selected apps</string>
+    <string name="settings_app_blacklist_mode">Blacklist mode</string>
+    <string name="settings_app_list_hint_whitelist">When the switch below is on, the timer pauses only while a selected app is in the foreground (whitelist).</string>
+    <string name="settings_app_list_hint_blacklist">When the switch below is on, the timer runs only while a selected app is in the foreground (blacklist).</string>
     <string name="settings_show_submenu">Show sub menu</string>
     <string name="settings_open_app_subpage">Open app subpage</string>
     <string name="settings_app_subpage_title">Select paused apps</string>
+    <string name="settings_app_subpage_title_whitelist">Select apps that pause the timer</string>
+    <string name="settings_app_subpage_title_blacklist">Select apps where the timer runs</string>
     <string name="settings_app_search">Search apps</string>
     <string name="settings_selected_apps_count">Selected apps: %1$d</string>
     <string name="settings_value_range">Allowed range: %1$d - %2$d</string>

@@ -34,6 +34,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import moe.lyniko.dreambreak.core.BreakRuntime
 import moe.lyniko.dreambreak.core.toAppSettings
+import moe.lyniko.dreambreak.data.AppListMode
 import moe.lyniko.dreambreak.data.SettingsStore
 import moe.lyniko.dreambreak.monitor.AppPauseMonitor
 import moe.lyniko.dreambreak.monitor.ForegroundAppMonitor
@@ -177,7 +178,9 @@ fun DreamBreakApp() {
                         AppDestinations.SETTINGS -> SettingsPage(
                             preferences = uiState.preferences,
                             pauseInListedApps = uiState.pauseInListedApps,
+                            appListMode = uiState.appListMode,
                             monitoredApps = uiState.monitoredApps,
+                            monitoredAppsBlacklist = uiState.monitoredAppsBlacklist,
                             hasUsageAccess = hasUsageAccess,
                             installedApps = installedApps,
                             autoStartOnBoot = uiState.autoStartOnBoot,
@@ -213,22 +216,45 @@ fun DreamBreakApp() {
                                     shouldPauseForForegroundApp(
                                         context = context,
                                         pauseInListedApps = enabled,
+                                        appListMode = uiState.appListMode,
                                         monitoredApps = uiState.monitoredApps,
+                                        monitoredAppsBlacklist = uiState.monitoredAppsBlacklist,
                                     )
                                 )
                             },
-                            onMonitoredAppsChange = { monitoredApps ->
-                                BreakRuntime.setMonitoredApps(monitoredApps)
-                                val hasExternalApp = parsePackageList(monitoredApps)
-                                    .any { it != context.packageName }
-                                if (hasExternalApp) {
-                                    BreakRuntime.markExternalPauseAppAddedOnce()
-                                }
+                            onAppListModeChange = { mode ->
+                                BreakRuntime.setAppListMode(mode)
                                 BreakRuntime.setAppPauseActive(
                                     shouldPauseForForegroundApp(
                                         context = context,
                                         pauseInListedApps = uiState.pauseInListedApps,
-                                        monitoredApps = monitoredApps,
+                                        appListMode = mode,
+                                        monitoredApps = uiState.monitoredApps,
+                                        monitoredAppsBlacklist = uiState.monitoredAppsBlacklist,
+                                    )
+                                )
+                            },
+                            onMonitoredAppsChange = { csv ->
+                                when (uiState.appListMode) {
+                                    AppListMode.WHITELIST -> BreakRuntime.setMonitoredApps(csv)
+                                    AppListMode.BLACKLIST -> BreakRuntime.setMonitoredAppsBlacklist(csv)
+                                }
+                                val hasExternalApp = parsePackageList(csv)
+                                    .any { it != context.packageName }
+                                if (hasExternalApp) {
+                                    BreakRuntime.markExternalPauseAppAddedOnce()
+                                }
+                                val whitelistCsv =
+                                    if (uiState.appListMode == AppListMode.WHITELIST) csv else uiState.monitoredApps
+                                val blacklistCsv =
+                                    if (uiState.appListMode == AppListMode.BLACKLIST) csv else uiState.monitoredAppsBlacklist
+                                BreakRuntime.setAppPauseActive(
+                                    shouldPauseForForegroundApp(
+                                        context = context,
+                                        pauseInListedApps = uiState.pauseInListedApps,
+                                        appListMode = uiState.appListMode,
+                                        monitoredApps = whitelistCsv,
+                                        monitoredAppsBlacklist = blacklistCsv,
                                     )
                                 )
                             },

@@ -9,6 +9,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import moe.lyniko.dreambreak.core.BreakRuntime
+import moe.lyniko.dreambreak.data.AppListMode
 
 object AppPauseMonitor {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -35,7 +36,9 @@ object AppPauseMonitor {
                     val shouldPause = shouldPauseForForegroundApp(
                         context = appContext,
                         pauseInListedApps = uiState.pauseInListedApps,
+                        appListMode = uiState.appListMode,
                         monitoredApps = uiState.monitoredApps,
+                        monitoredAppsBlacklist = uiState.monitoredAppsBlacklist,
                     )
                     BreakRuntime.setAppPauseActive(shouldPause)
                     delay(CHECK_INTERVAL_MILLIS)
@@ -47,24 +50,65 @@ object AppPauseMonitor {
     private const val CHECK_INTERVAL_MILLIS = 2_000L
 }
 
-fun shouldPauseForForegroundApp(
-    context: Context,
-    pauseInListedApps: Boolean,
-    monitoredApps: String,
-): Boolean {
-    if (!pauseInListedApps) {
-        return false
-    }
-
-    val monitoredPackages = monitoredApps
+internal fun parseMonitoredPackageSet(csv: String): Set<String> {
+    return csv
         .split(',')
         .map { it.trim() }
         .filter { it.isNotEmpty() }
         .toSet()
-    if (monitoredPackages.isEmpty()) {
+}
+
+/**
+ * Whether the break cycle should be paused based on the foreground app and list mode.
+ *
+ * Whitelist: pause while a selected app is in the foreground.
+ * Blacklist: pause while the foreground app is not in the selected set (timer only runs in listed apps).
+ */
+fun shouldPauseForForegroundPackage(
+    topPackage: String?,
+    appListMode: AppListMode,
+    monitoredAppsWhitelist: String,
+    monitoredAppsBlacklist: String,
+): Boolean {
+    val whitelist = parseMonitoredPackageSet(monitoredAppsWhitelist)
+    val blacklist = parseMonitoredPackageSet(monitoredAppsBlacklist)
+    return when (appListMode) {
+        AppListMode.WHITELIST -> {
+            if (whitelist.isEmpty()) {
+                return false
+            }
+            if (topPackage == null) {
+                return false
+            }
+            whitelist.contains(topPackage)
+        }
+        AppListMode.BLACKLIST -> {
+            if (blacklist.isEmpty()) {
+                return true
+            }
+            if (topPackage == null) {
+                return true
+            }
+            !blacklist.contains(topPackage)
+        }
+    }
+}
+
+fun shouldPauseForForegroundApp(
+    context: Context,
+    pauseInListedApps: Boolean,
+    appListMode: AppListMode,
+    monitoredApps: String,
+    monitoredAppsBlacklist: String,
+): Boolean {
+    if (!pauseInListedApps) {
         return false
     }
-
-    val topPackage = ForegroundAppMonitor.currentForegroundPackage(context) ?: return false
-    return monitoredPackages.contains(topPackage)
+    val topPackage = ForegroundAppMonitor.currentForegroundPackage(context)
+    return shouldPauseForForegroundPackage(
+        topPackage = topPackage,
+        appListMode = appListMode,
+        monitoredAppsWhitelist = monitoredApps,
+        monitoredAppsBlacklist = monitoredAppsBlacklist,
+    )
 }

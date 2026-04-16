@@ -60,6 +60,7 @@ import moe.lyniko.dreambreak.core.SessionMode
 import moe.lyniko.dreambreak.core.formatPostponeDurations
 import moe.lyniko.dreambreak.core.normalizePostponeDurationInput
 import moe.lyniko.dreambreak.core.parsePostponeDurations
+import moe.lyniko.dreambreak.data.AppListMode
 import moe.lyniko.dreambreak.data.AppThemeMode
 import moe.lyniko.dreambreak.monitor.InstalledApp
 import moe.lyniko.dreambreak.notification.BreakReminderService
@@ -84,7 +85,9 @@ private const val BREAK_OVERLAY_FADE_DURATION_DEFAULT_MS = 300
 fun SettingsPage(
     preferences: BreakPreferences,
     pauseInListedApps: Boolean,
+    appListMode: AppListMode,
     monitoredApps: String,
+    monitoredAppsBlacklist: String,
     hasUsageAccess: Boolean,
     installedApps: List<InstalledApp>,
     autoStartOnBoot: Boolean,
@@ -109,6 +112,7 @@ fun SettingsPage(
     themeMode: AppThemeMode,
     onPreferencesChange: (BreakPreferences) -> Unit,
     onPauseInListedAppsChange: (Boolean) -> Unit,
+    onAppListModeChange: (AppListMode) -> Unit,
     onMonitoredAppsChange: (String) -> Unit,
     onAutoStartOnBootChange: (Boolean) -> Unit,
     onRestoreEnabledStateOnStartChange: (Boolean) -> Unit,
@@ -255,7 +259,11 @@ fun SettingsPage(
         )
     }
 
-    val selectedPackages = parsePackageList(monitoredApps)
+    val activeMonitoredAppsCsv = when (appListMode) {
+        AppListMode.WHITELIST -> monitoredApps
+        AppListMode.BLACKLIST -> monitoredAppsBlacklist
+    }
+    val selectedPackages = parsePackageList(activeMonitoredAppsCsv)
     val filteredApps = installedApps.filter {
         appSearch.isBlank() ||
             it.label.contains(appSearch, ignoreCase = true) ||
@@ -275,7 +283,15 @@ fun SettingsPage(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(stringResource(R.string.settings_app_subpage_title), style = MaterialTheme.typography.titleLarge)
+                Text(
+                    stringResource(
+                        when (appListMode) {
+                            AppListMode.WHITELIST -> R.string.settings_app_subpage_title_whitelist
+                            AppListMode.BLACKLIST -> R.string.settings_app_subpage_title_blacklist
+                        },
+                    ),
+                    style = MaterialTheme.typography.titleLarge,
+                )
                 Button(onClick = { openSubPage = false }) {
                     Text(stringResource(R.string.action_back))
                 }
@@ -443,7 +459,32 @@ fun SettingsPage(
 
         Text(stringResource(R.string.settings_pause), style = MaterialTheme.typography.titleLarge)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.settings_pause_selected_apps), modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.settings_app_blacklist_mode), modifier = Modifier.weight(1f))
+            Switch(
+                checked = appListMode == AppListMode.BLACKLIST,
+                onCheckedChange = { onAppListModeChange(if (it) AppListMode.BLACKLIST else AppListMode.WHITELIST) },
+            )
+        }
+        Text(
+            text = stringResource(
+                when (appListMode) {
+                    AppListMode.WHITELIST -> R.string.settings_app_list_hint_whitelist
+                    AppListMode.BLACKLIST -> R.string.settings_app_list_hint_blacklist
+                },
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                stringResource(
+                    when (appListMode) {
+                        AppListMode.WHITELIST -> R.string.settings_pause_app_list_enabled_whitelist
+                        AppListMode.BLACKLIST -> R.string.settings_pause_app_list_enabled_blacklist
+                    },
+                ),
+                modifier = Modifier.weight(1f),
+            )
             Switch(checked = pauseInListedApps, onCheckedChange = onPauseInListedAppsChange)
         }
         if (!hasUsageAccess) {

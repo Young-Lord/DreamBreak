@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import moe.lyniko.dreambreak.data.AppListMode
 import moe.lyniko.dreambreak.data.AppSettings
 import moe.lyniko.dreambreak.data.AppThemeMode
 
@@ -17,7 +18,9 @@ data class BreakUiState(
     val preferences: BreakPreferences = BreakPreferences(),
     val state: BreakState = BreakState.initial(BreakPreferences()),
     val pauseInListedApps: Boolean = false,
+    val appListMode: AppListMode = AppListMode.WHITELIST,
     val monitoredApps: String = "",
+    val monitoredAppsBlacklist: String = "",
     val autoStartOnBoot: Boolean = false,
     val appEnabled: Boolean = true,
     val overlayTransparencyPercent: Int = 28,
@@ -64,7 +67,9 @@ fun AppSettings.applyToUiState(current: BreakUiState, isFirstLoad: Boolean = fal
     return current.copy(
         preferences = preferences,
         pauseInListedApps = pauseInListedApps,
+        appListMode = appListMode,
         monitoredApps = monitoredApps,
+        monitoredAppsBlacklist = monitoredAppsBlacklist,
         autoStartOnBoot = autoStartOnBoot,
         appEnabled = effectiveAppEnabled,
         overlayTransparencyPercent = overlayTransparencyPercent.coerceIn(OVERLAY_TRANSPARENCY_MIN, OVERLAY_TRANSPARENCY_MAX),
@@ -100,7 +105,9 @@ fun AppSettings.applyToUiState(current: BreakUiState, isFirstLoad: Boolean = fal
 fun BreakUiState.toAppSettings(): AppSettings = AppSettings(
     preferences = preferences,
     pauseInListedApps = pauseInListedApps,
+    appListMode = appListMode,
     monitoredApps = monitoredApps,
+    monitoredAppsBlacklist = monitoredAppsBlacklist,
     autoStartOnBoot = autoStartOnBoot,
     appEnabled = appEnabled,
     overlayTransparencyPercent = overlayTransparencyPercent,
@@ -194,6 +201,14 @@ object BreakRuntime {
 
     fun setMonitoredApps(value: String) {
         updateUiState { current -> current.copy(monitoredApps = value) }
+    }
+
+    fun setAppListMode(mode: AppListMode) {
+        updateUiState { current -> current.copy(appListMode = mode) }
+    }
+
+    fun setMonitoredAppsBlacklist(value: String) {
+        updateUiState { current -> current.copy(monitoredAppsBlacklist = value) }
     }
 
     fun setAppEnabled(enabled: Boolean): Boolean {

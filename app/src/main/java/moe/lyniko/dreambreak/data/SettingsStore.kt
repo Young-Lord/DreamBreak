@@ -32,7 +32,9 @@ private val Context.settingsDataStore by preferencesDataStore(name = "dream_brea
 data class AppSettings(
     val preferences: BreakPreferences = BreakPreferences(),
     val pauseInListedApps: Boolean = false,
+    val appListMode: AppListMode = AppListMode.WHITELIST,
     val monitoredApps: String = "",
+    val monitoredAppsBlacklist: String = "",
     val autoStartOnBoot: Boolean = false,
     val appEnabled: Boolean = true,
     val overlayTransparencyPercent: Int = 28,
@@ -94,17 +96,25 @@ class SettingsStore(private val context: Context) {
         val legacyOverlayAnimationDurationMs =
             (prefs[Keys.BREAK_OVERLAY_ANIMATION_DURATION_MS] ?: 300).coerceIn(OVERLAY_ANIMATION_DURATION_MIN, OVERLAY_ANIMATION_DURATION_MAX)
         val monitoredApps = prefs[Keys.MONITORED_APPS] ?: ""
+        val monitoredAppsBlacklist = prefs[Keys.MONITORED_APPS_BLACKLIST] ?: ""
+        val appListMode = AppListMode.fromStorage(prefs[Keys.APP_LIST_MODE])
         val pauseInListedApps = prefs[Keys.PAUSE_IN_LISTED_APPS] ?: false
-        val inferredVisitedSpecificAppsPage = pauseInListedApps || monitoredApps.isNotBlank()
+        val inferredVisitedSpecificAppsPage =
+            pauseInListedApps || monitoredApps.isNotBlank() || monitoredAppsBlacklist.isNotBlank()
         val inferredEnabledPauseInListedApps = pauseInListedApps
         val inferredAddedExternalPauseApp = hasExternalAppConfigured(
             monitoredApps = monitoredApps,
+            selfPackageName = context.packageName,
+        ) || hasExternalAppConfigured(
+            monitoredApps = monitoredAppsBlacklist,
             selfPackageName = context.packageName,
         )
         AppSettings(
             preferences = preferences,
             pauseInListedApps = pauseInListedApps,
+            appListMode = appListMode,
             monitoredApps = monitoredApps,
+            monitoredAppsBlacklist = monitoredAppsBlacklist,
             autoStartOnBoot = prefs[Keys.AUTO_START_ON_BOOT] ?: false,
             appEnabled = prefs[Keys.APP_ENABLED] ?: true,
             overlayTransparencyPercent = (prefs[Keys.OVERLAY_TRANSPARENCY_PERCENT] ?: 28).coerceIn(OVERLAY_TRANSPARENCY_MIN, OVERLAY_TRANSPARENCY_MAX),
@@ -177,7 +187,9 @@ class SettingsStore(private val context: Context) {
             prefs.remove(Keys.RESET_INTERVAL_AFTER_PAUSE)
             prefs.remove(Keys.RESET_CYCLE_AFTER_PAUSE)
             prefs[Keys.PAUSE_IN_LISTED_APPS] = settings.pauseInListedApps
+            prefs[Keys.APP_LIST_MODE] = settings.appListMode.storageValue
             prefs[Keys.MONITORED_APPS] = settings.monitoredApps
+            prefs[Keys.MONITORED_APPS_BLACKLIST] = settings.monitoredAppsBlacklist
             prefs[Keys.AUTO_START_ON_BOOT] = settings.autoStartOnBoot
             prefs[Keys.APP_ENABLED] = settings.appEnabled
             prefs[Keys.OVERLAY_TRANSPARENCY_PERCENT] = settings.overlayTransparencyPercent.coerceIn(OVERLAY_TRANSPARENCY_MIN, OVERLAY_TRANSPARENCY_MAX)
@@ -236,7 +248,9 @@ class SettingsStore(private val context: Context) {
         val RESET_INTERVAL_AFTER_PAUSE = intPreferencesKey("reset_interval_after_pause")
         val RESET_CYCLE_AFTER_PAUSE = intPreferencesKey("reset_cycle_after_pause")
         val PAUSE_IN_LISTED_APPS = booleanPreferencesKey("pause_in_clock_app")
+        val APP_LIST_MODE = intPreferencesKey("app_list_mode")
         val MONITORED_APPS = stringPreferencesKey("monitored_apps")
+        val MONITORED_APPS_BLACKLIST = stringPreferencesKey("monitored_apps_blacklist")
         val AUTO_START_ON_BOOT = booleanPreferencesKey("auto_start_on_boot")
         val APP_ENABLED = booleanPreferencesKey("app_enabled")
         val OVERLAY_TRANSPARENCY_PERCENT = intPreferencesKey("overlay_transparency_percent")
