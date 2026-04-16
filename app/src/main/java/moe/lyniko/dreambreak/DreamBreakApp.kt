@@ -26,15 +26,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import kotlinx.coroutines.launch
 import moe.lyniko.dreambreak.core.BreakRuntime
 import moe.lyniko.dreambreak.core.toAppSettings
 import moe.lyniko.dreambreak.data.AppListMode
+import moe.lyniko.dreambreak.data.AppSettings
 import moe.lyniko.dreambreak.data.SettingsStore
 import moe.lyniko.dreambreak.monitor.AppPauseMonitor
 import moe.lyniko.dreambreak.monitor.ForegroundAppMonitor
@@ -57,8 +60,27 @@ fun DreamBreakApp() {
     val settingsStore = remember { SettingsStore(context.applicationContext) }
     val uiState by BreakRuntime.uiState.collectAsState()
     var settingsLoaded by remember { mutableStateOf(false) }
+    var latestDiskSettings by remember { mutableStateOf<AppSettings?>(null) }
     var currentDestination by remember { mutableStateOf(AppDestinations.HOME) }
     val hasUsageAccess = ForegroundAppMonitor.hasUsageAccess(context)
+    val scope = rememberCoroutineScope()
+
+    fun commitSettings() {
+        if (!settingsLoaded) {
+            return
+        }
+        val base = BreakRuntime.uiState.value.toAppSettings()
+        val disk = latestDiskSettings
+        val toSave = if (disk == null) {
+            base
+        } else {
+            // Tile existence is controlled by the system; never overwrite it from UI.
+            base.copy(hasAddedQsTile = disk.hasAddedQsTile)
+        }
+        scope.launch {
+            settingsStore.save(toSave)
+        }
+    }
 
     val installedApps by produceState(initialValue = emptyList<InstalledApp>(), key1 = Unit) {
         value = InstalledAppsProvider.loadLaunchableApps(context.applicationContext)
@@ -80,11 +102,13 @@ fun DreamBreakApp() {
             OverlayImageTarget.PORTRAIT -> BreakRuntime.setOverlayBackgroundPortraitUri(uri.toString())
             OverlayImageTarget.LANDSCAPE -> BreakRuntime.setOverlayBackgroundLandscapeUri(uri.toString())
         }
+        commitSettings()
     }
 
     LaunchedEffect(settingsStore) {
         var isFirstLoad = true
         settingsStore.settingsFlow.collect { settings ->
+            latestDiskSettings = settings
             RuntimeBootstrap.applySettings(settings, isFirstLoad = isFirstLoad)
             isFirstLoad = false
             settingsLoaded = true
@@ -94,15 +118,6 @@ fun DreamBreakApp() {
     LaunchedEffect(Unit) {
         AppPauseMonitor.start(context.applicationContext)
         ScreenLockMonitor.start(context.applicationContext)
-    }
-
-    val persistableSettings = remember(uiState) { uiState.toAppSettings() }
-
-    LaunchedEffect(persistableSettings, settingsLoaded) {
-        if (!settingsLoaded) {
-            return@LaunchedEffect
-        }
-        settingsStore.save(persistableSettings)
     }
 
     LaunchedEffect(settingsLoaded, uiState.persistentNotificationEnabled, uiState.appEnabled) {
@@ -125,7 +140,10 @@ fun DreamBreakApp() {
 
     if (!uiState.onboardingCompleted) {
         OnboardingScreen(
-            onFinish = { BreakRuntime.setOnboardingCompleted(true) },
+            onFinish = {
+                BreakRuntime.setOnboardingCompleted(true)
+                commitSettings()
+            },
         )
         return
     }
@@ -167,7 +185,10 @@ fun DreamBreakApp() {
                             preferences = uiState.preferences,
                             appEnabled = uiState.appEnabled,
                             breakCycleEnableBlocked = breakCycleEnableBlocked,
-                            onAppEnabledChange = { BreakRuntime.setAppEnabled(it) },
+                            onAppEnabledChange = {
+                                BreakRuntime.setAppEnabled(it)
+                                commitSettings()
+                            },
                             onBreakNow = { BreakRuntime.requestBreakNow() },
                             onBigBreakNow = { BreakRuntime.requestBreakNow(bigBreak = true) },
                             onPostpone = {
@@ -197,6 +218,7 @@ fun DreamBreakApp() {
                                 uiState.persistentNotificationTitleTemplate,
                             persistentNotificationContentTemplate =
                                 uiState.persistentNotificationContentTemplate,
+                            hasAddedQsTile = uiState.hasAddedQsTile,
                             qsTileCountdownAsTitle = uiState.qsTileCountdownAsTitle,
                             qsTileClickAction = uiState.qsTileClickAction,
                             breakShowPostponeButton = uiState.breakShowPostponeButton,
@@ -207,7 +229,10 @@ fun DreamBreakApp() {
                             breakOverlayFadeInDurationMs = uiState.breakOverlayFadeInDurationMs,
                             breakOverlayFadeOutDurationMs = uiState.breakOverlayFadeOutDurationMs,
                             themeMode = uiState.themeMode,
-                            onPreferencesChange = { BreakRuntime.updatePreferences(it) },
+                            onPreferencesChange = {
+                                BreakRuntime.updatePreferences(it)
+                                commitSettings()
+                            },
                             onPauseInListedAppsChange = { enabled ->
                                 BreakRuntime.setPauseInListedApps(enabled)
                                 if (enabled) {
@@ -222,6 +247,7 @@ fun DreamBreakApp() {
                                         monitoredAppsBlacklist = uiState.monitoredAppsBlacklist,
                                     )
                                 )
+                                commitSettings()
                             },
                             onAppListModeChange = { mode ->
                                 BreakRuntime.setAppListMode(mode)
@@ -234,6 +260,7 @@ fun DreamBreakApp() {
                                         monitoredAppsBlacklist = uiState.monitoredAppsBlacklist,
                                     )
                                 )
+                                commitSettings()
                             },
                             onMonitoredAppsChange = { csv ->
                                 when (uiState.appListMode) {
@@ -258,11 +285,24 @@ fun DreamBreakApp() {
                                         monitoredAppsBlacklist = blacklistCsv,
                                     )
                                 )
+                                commitSettings()
                             },
-                            onAutoStartOnBootChange = { BreakRuntime.setAutoStartOnBoot(it) },
-                            onRestoreEnabledStateOnStartChange = { BreakRuntime.setRestoreEnabledStateOnStart(it) },
-                            onReenableOnScreenUnlockChange = { BreakRuntime.setReenableOnScreenUnlock(it) },
-                            onOverlayTransparencyPercentChange = { BreakRuntime.setOverlayTransparencyPercent(it) },
+                            onAutoStartOnBootChange = {
+                                BreakRuntime.setAutoStartOnBoot(it)
+                                commitSettings()
+                            },
+                            onRestoreEnabledStateOnStartChange = {
+                                BreakRuntime.setRestoreEnabledStateOnStart(it)
+                                commitSettings()
+                            },
+                            onReenableOnScreenUnlockChange = {
+                                BreakRuntime.setReenableOnScreenUnlock(it)
+                                commitSettings()
+                            },
+                            onOverlayTransparencyPercentChange = {
+                                BreakRuntime.setOverlayTransparencyPercent(it)
+                                commitSettings()
+                            },
                             onPickOverlayPortraitImage = {
                                 overlayPickerTarget = OverlayImageTarget.PORTRAIT
                                 overlayPicker.launch(arrayOf("image/*"))
@@ -271,10 +311,22 @@ fun DreamBreakApp() {
                                 overlayPickerTarget = OverlayImageTarget.LANDSCAPE
                                 overlayPicker.launch(arrayOf("image/*"))
                             },
-                            onClearOverlayPortraitImage = { BreakRuntime.setOverlayBackgroundPortraitUri("") },
-                            onClearOverlayLandscapeImage = { BreakRuntime.setOverlayBackgroundLandscapeUri("") },
-                            onExcludeFromRecentsChange = { BreakRuntime.setExcludeFromRecents(it) },
-                            onThemeModeChange = { BreakRuntime.setThemeMode(it) },
+                            onClearOverlayPortraitImage = {
+                                BreakRuntime.setOverlayBackgroundPortraitUri("")
+                                commitSettings()
+                            },
+                            onClearOverlayLandscapeImage = {
+                                BreakRuntime.setOverlayBackgroundLandscapeUri("")
+                                commitSettings()
+                            },
+                            onExcludeFromRecentsChange = {
+                                BreakRuntime.setExcludeFromRecents(it)
+                                commitSettings()
+                            },
+                            onThemeModeChange = {
+                                BreakRuntime.setThemeMode(it)
+                                commitSettings()
+                            },
                             onPersistentNotificationEnabledChange = { enabled ->
                                 if (!enabled) {
                                     BreakRuntime.setPersistentNotificationEnabled(false)
@@ -284,42 +336,55 @@ fun DreamBreakApp() {
                                     BreakRuntime.setPersistentNotificationEnabled(false)
                                     MainActivity.openNotificationSettings(context)
                                 }
+                                commitSettings()
                             },
                             onPersistentNotificationUpdateFrequencySecondsChange = {
                                 BreakRuntime.setPersistentNotificationUpdateFrequencySeconds(it)
+                                commitSettings()
                             },
                             onPersistentNotificationTitleTemplateChange = {
                                 BreakRuntime.setPersistentNotificationTitleTemplate(it)
+                                commitSettings()
                             },
                             onPersistentNotificationContentTemplateChange = {
                                 BreakRuntime.setPersistentNotificationContentTemplate(it)
+                                commitSettings()
                             },
                             onQsTileCountdownAsTitleChange = {
                                 BreakRuntime.setQsTileCountdownAsTitle(it)
+                                commitSettings()
                             },
                             onQsTileClickActionChange = {
                                 BreakRuntime.setQsTileClickAction(it)
+                                commitSettings()
                             },
                             onBreakShowPostponeButtonChange = {
                                 BreakRuntime.setBreakShowPostponeButton(it)
+                                commitSettings()
                             },
                             onBreakShowTitleChange = {
                                 BreakRuntime.setBreakShowTitle(it)
+                                commitSettings()
                             },
                             onBreakShowCountdownChange = {
                                 BreakRuntime.setBreakShowCountdown(it)
+                                commitSettings()
                             },
                             onBreakShowExitButtonChange = {
                                 BreakRuntime.setBreakShowExitButton(it)
+                                commitSettings()
                             },
                             onBreakExitPostponeSecondsChange = {
                                 BreakRuntime.setBreakExitPostponeSeconds(it)
+                                commitSettings()
                             },
                             onBreakOverlayFadeInDurationMsChange = {
                                 BreakRuntime.setBreakOverlayFadeInDurationMs(it)
+                                commitSettings()
                             },
                             onBreakOverlayFadeOutDurationMsChange = {
                                 BreakRuntime.setBreakOverlayFadeOutDurationMs(it)
+                                commitSettings()
                             },
                             onOpenPreBreakNotificationChannelSettings = {
                                 MainActivity.openNotificationChannelSettings(
@@ -327,7 +392,10 @@ fun DreamBreakApp() {
                                     BreakReminderService.PRE_BREAK_CHANNEL_ID,
                                 )
                             },
-                            onSpecificAppsPageOpened = { BreakRuntime.markSpecificAppsPageVisited() },
+                            onSpecificAppsPageOpened = {
+                                BreakRuntime.markSpecificAppsPageVisited()
+                                commitSettings()
+                            },
                         )
                     }
                 }

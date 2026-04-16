@@ -7,6 +7,7 @@ import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -16,6 +17,8 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import moe.lyniko.dreambreak.R
 import moe.lyniko.dreambreak.core.BreakPhase
 import moe.lyniko.dreambreak.core.BreakPreferences
@@ -47,6 +50,7 @@ class DreamBreakTileService : TileService() {
 
     override fun onTileAdded() {
         super.onTileAdded()
+        updateHasAddedQsTileFromCallback(source = "onTileAdded", added = true)
         scope.launch {
             val settings = settingsStore.settingsFlow.first()
             applySettingsToRuntime(settings)
@@ -60,9 +64,24 @@ class DreamBreakTileService : TileService() {
         }
     }
 
+    override fun onTileRemoved() {
+        super.onTileRemoved()
+        updateHasAddedQsTileFromCallback(source = "onTileRemoved", added = false)
+    }
+
     override fun onStartListening() {
         super.onStartListening()
         startListeningJobs()
+    }
+
+    private fun updateHasAddedQsTileFromCallback(source: String, added: Boolean) {
+        runBlocking {
+            val before = withContext(Dispatchers.IO) { settingsStore.settingsFlow.first() }
+            if (before.hasAddedQsTile != added) {
+                withContext(Dispatchers.IO) { settingsStore.setHasAddedQsTile(added) }
+            }
+        }
+        BreakRuntime.setHasAddedQsTile(added)
     }
 
     override fun onStopListening() {

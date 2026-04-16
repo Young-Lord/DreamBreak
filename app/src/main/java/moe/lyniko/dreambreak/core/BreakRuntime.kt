@@ -33,6 +33,7 @@ data class BreakUiState(
     val persistentNotificationUpdateFrequencySeconds: Int = 10,
     val persistentNotificationTitleTemplate: String = DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE,
     val persistentNotificationContentTemplate: String = DEFAULT_PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE,
+    val hasAddedQsTile: Boolean = false,
     val qsTileCountdownAsTitle: Boolean = false,
     val qsTileClickAction: QsTileClickAction = QsTileClickAction.TOGGLE_ENABLED,
     val breakShowPostponeButton: Boolean = true,
@@ -84,6 +85,7 @@ fun AppSettings.applyToUiState(current: BreakUiState, isFirstLoad: Boolean = fal
             persistentNotificationUpdateFrequencySeconds.coerceIn(NOTIFICATION_FREQUENCY_MIN, NOTIFICATION_FREQUENCY_MAX),
         persistentNotificationTitleTemplate = persistentNotificationTitleTemplate,
         persistentNotificationContentTemplate = persistentNotificationContentTemplate,
+        hasAddedQsTile = hasAddedQsTile,
         qsTileCountdownAsTitle = qsTileCountdownAsTitle,
         qsTileClickAction = qsTileClickAction,
         breakShowPostponeButton = breakShowPostponeButton,
@@ -122,6 +124,7 @@ fun BreakUiState.toAppSettings(): AppSettings = AppSettings(
     persistentNotificationUpdateFrequencySeconds = persistentNotificationUpdateFrequencySeconds,
     persistentNotificationTitleTemplate = persistentNotificationTitleTemplate,
     persistentNotificationContentTemplate = persistentNotificationContentTemplate,
+    hasAddedQsTile = hasAddedQsTile,
     qsTileCountdownAsTitle = qsTileCountdownAsTitle,
     qsTileClickAction = qsTileClickAction,
     breakShowPostponeButton = breakShowPostponeButton,
@@ -344,6 +347,10 @@ object BreakRuntime {
 
     fun setQsTileClickAction(action: QsTileClickAction) {
         updateUiState { current -> current.copy(qsTileClickAction = action) }
+    }
+
+    fun setHasAddedQsTile(added: Boolean) {
+        updateUiState { current -> current.copy(hasAddedQsTile = added) }
     }
 
     fun setThemeMode(mode: AppThemeMode) {

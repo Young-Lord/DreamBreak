@@ -1,9 +1,14 @@
 package moe.lyniko.dreambreak.ui.settings
 
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.drawable.Icon as AndroidIcon
+import android.os.Build
+import android.app.StatusBarManager
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -54,9 +59,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import moe.lyniko.dreambreak.MainActivity
 import moe.lyniko.dreambreak.R
+import moe.lyniko.dreambreak.core.BreakRuntime
 import moe.lyniko.dreambreak.core.BreakPhase
 import moe.lyniko.dreambreak.core.BreakPreferences
 import moe.lyniko.dreambreak.core.BreakState
@@ -73,6 +80,8 @@ import moe.lyniko.dreambreak.data.QsTileClickAction
 import moe.lyniko.dreambreak.monitor.InstalledApp
 import moe.lyniko.dreambreak.notification.BreakReminderService
 import moe.lyniko.dreambreak.overlay.BreakOverlayController
+import moe.lyniko.dreambreak.tile.DreamBreakTileService
+import moe.lyniko.dreambreak.data.SettingsStore
 
 private const val OVERLAY_PREVIEW_AUTO_DISMISS_MS = 20_000L
 private const val SMALL_EVERY_MIN_SECONDS = 60
@@ -109,6 +118,7 @@ fun SettingsPage(
     persistentNotificationUpdateFrequencySeconds: Int,
     persistentNotificationTitleTemplate: String,
     persistentNotificationContentTemplate: String,
+    hasAddedQsTile: Boolean,
     qsTileCountdownAsTitle: Boolean,
     qsTileClickAction: QsTileClickAction,
     breakShowPostponeButton: Boolean,
@@ -150,6 +160,8 @@ fun SettingsPage(
     onSpecificAppsPageOpened: () -> Unit,
 ) {
     val context = LocalContext.current
+    val appContext = context.applicationContext
+    val scope = rememberCoroutineScope()
     val defaultPreferences = remember { BreakPreferences() }
     val defaultPersistentNotificationTitleTemplate = remember {
         DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE
@@ -486,10 +498,15 @@ fun SettingsPage(
 
         Text(stringResource(R.string.settings_pause), style = MaterialTheme.typography.titleLarge)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.settings_app_list_enabled), modifier = Modifier.weight(1f))
+            Switch(checked = pauseInListedApps, onCheckedChange = onPauseInListedAppsChange)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.settings_app_blacklist_mode), modifier = Modifier.weight(1f))
             Switch(
                 checked = appListMode == AppListMode.BLACKLIST,
                 onCheckedChange = { onAppListModeChange(if (it) AppListMode.BLACKLIST else AppListMode.WHITELIST) },
+                enabled = pauseInListedApps,
             )
         }
         Text(
@@ -502,18 +519,6 @@ fun SettingsPage(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                stringResource(
-                    when (appListMode) {
-                        AppListMode.WHITELIST -> R.string.settings_pause_app_list_enabled_whitelist
-                        AppListMode.BLACKLIST -> R.string.settings_pause_app_list_enabled_blacklist
-                    },
-                ),
-                modifier = Modifier.weight(1f),
-            )
-            Switch(checked = pauseInListedApps, onCheckedChange = onPauseInListedAppsChange)
-        }
         if (!hasUsageAccess) {
             Text(
                 text = stringResource(R.string.settings_no_usage_access),
@@ -521,10 +526,13 @@ fun SettingsPage(
             )
         }
 
-        Button(onClick = {
-            onSpecificAppsPageOpened()
-            showPauseAppListPage = true
-        }) {
+        Button(
+            onClick = {
+                onSpecificAppsPageOpened()
+                showPauseAppListPage = true
+            },
+            enabled = pauseInListedApps,
+        ) {
             Text(stringResource(R.string.settings_manage_pause_app_list))
         }
         Text(
@@ -621,17 +629,6 @@ fun SettingsPage(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.settings_qs_tile_countdown_as_title), modifier = Modifier.weight(1f))
-            Switch(
-                checked = qsTileCountdownAsTitle,
-                onCheckedChange = onQsTileCountdownAsTitleChange,
-            )
-        }
-        QsTileClickActionDropdownRow(
-            selectedAction = qsTileClickAction,
-            onQsTileClickActionChange = onQsTileClickActionChange,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.settings_pre_break_notification), modifier = Modifier.weight(1f))
             Switch(
                 checked = preferences.preBreakNotificationEnabled,
@@ -685,6 +682,40 @@ fun SettingsPage(
             }
         }
 
+        Text(stringResource(R.string.settings_qs_tile), style = MaterialTheme.typography.titleLarge)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasAddedQsTile) {
+            Text(
+                text = stringResource(R.string.settings_qs_tile_not_added_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Button(
+                onClick = {
+                    requestAddQuickSettingsTile(context) { confirmedAdded ->
+                        if (!confirmedAdded) return@requestAddQuickSettingsTile
+                        BreakRuntime.setHasAddedQsTile(true)
+                        scope.launch {
+                            SettingsStore(appContext).setHasAddedQsTile(true)
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.settings_qs_tile_request_add))
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.settings_qs_tile_countdown_as_title), modifier = Modifier.weight(1f))
+            Switch(
+                checked = qsTileCountdownAsTitle,
+                onCheckedChange = onQsTileCountdownAsTitleChange,
+            )
+        }
+        QsTileClickActionDropdownRow(
+            selectedAction = qsTileClickAction,
+            onQsTileClickActionChange = onQsTileClickActionChange,
+        )
+
         Text(stringResource(R.string.settings_general), style = MaterialTheme.typography.titleLarge)
         ThemeModeDropdownRow(
             selectedMode = themeMode,
@@ -707,6 +738,30 @@ fun SettingsPage(
             Switch(checked = excludeFromRecents, onCheckedChange = onExcludeFromRecentsChange)
         }
     }
+}
+
+private fun requestAddQuickSettingsTile(
+    context: Context,
+    onConfirmedAdded: (Boolean) -> Unit,
+) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val statusBarManager = ContextCompat.getSystemService(context, StatusBarManager::class.java)
+            ?: return
+        val component = ComponentName(context, DreamBreakTileService::class.java)
+        statusBarManager.requestAddTileService(
+            component,
+            context.getString(R.string.qs_tile_label),
+            AndroidIcon.createWithResource(context, R.drawable.ic_qs_bed),
+            context.mainExecutor,
+        ) { result ->
+            val confirmed = result == StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ADDED ||
+                result == StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ALREADY_ADDED
+            onConfirmedAdded(confirmed)
+        }
+        return
+    }
+
+    onConfirmedAdded(false)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

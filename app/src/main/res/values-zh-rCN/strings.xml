@@ -77,11 +77,10 @@
     <string name="settings_break_overlay_fade_in_duration_ms">遮盖层淡入动画时长（毫秒，0 为禁用）</string>
     <string name="settings_break_overlay_fade_out_duration_ms">遮盖层淡出动画时长（毫秒，0 为禁用）</string>
     <string name="settings_pause_selected_apps">在这些应用中暂停计时</string>
-    <string name="settings_pause_app_list_enabled_whitelist">按名单暂停计时</string>
-    <string name="settings_pause_app_list_enabled_blacklist">仅在名单内计时与休息</string>
+    <string name="settings_app_list_enabled">按应用暂停</string>
     <string name="settings_app_blacklist_mode">黑名单模式</string>
-    <string name="settings_app_list_hint_whitelist">上面的开关关闭时，在下方所选应用处于前台时暂停计时（白名单）。</string>
-    <string name="settings_app_list_hint_blacklist">上面的开关开启时，仅在下方所选应用处于前台时计时（黑名单）。</string>
+    <string name="settings_app_list_hint_whitelist">白名单：所选应用处于前台时暂停计时。</string>
+    <string name="settings_app_list_hint_blacklist">黑名单：仅在所选应用处于前台时计时。</string>
     <string name="settings_manage_pause_app_list">管理应用列表</string>
     <string name="settings_pause_app_list_screen_title_whitelist">白名单</string>
     <string name="settings_pause_app_list_screen_title_blacklist">黑名单</string>
@@ -104,6 +103,9 @@
     <string name="settings_persistent_notification_title_template">持久通知标题模板</string>
     <string name="settings_persistent_notification_content_template">持久通知内容模板</string>
     <string name="settings_persistent_notification_placeholders">可用占位符：$doneSmallBreak、$doneBigBreak、$timeToNextBreak、$nextBreakType</string>
+    <string name="settings_qs_tile">快捷设置磁贴</string>
+    <string name="settings_qs_tile_not_added_hint">尚未添加磁贴。添加到快捷设置后可一键控制，并显示距离下次休息的时间。</string>
+    <string name="settings_qs_tile_request_add">请求添加磁贴</string>
     <string name="settings_qs_tile_countdown_as_title">将快捷开关倒计时显示为标题</string>
     <string name="settings_qs_tile_click_action">快捷设置磁贴单击</string>
     <string name="settings_qs_tile_click_action_none">无</string>

@@ -46,6 +46,7 @@ data class AppSettings(
     val persistentNotificationUpdateFrequencySeconds: Int = 10,
     val persistentNotificationTitleTemplate: String = DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE,
     val persistentNotificationContentTemplate: String = DEFAULT_PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE,
+    val hasAddedQsTile: Boolean = false,
     val qsTileCountdownAsTitle: Boolean = false,
     val qsTileClickAction: QsTileClickAction = QsTileClickAction.TOGGLE_ENABLED,
     val breakShowPostponeButton: Boolean = true,
@@ -134,6 +135,7 @@ class SettingsStore(private val context: Context) {
             persistentNotificationContentTemplate =
                 prefs[Keys.PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE]
                     ?: DEFAULT_PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE,
+            hasAddedQsTile = prefs[Keys.HAS_ADDED_QS_TILE] ?: false,
             qsTileCountdownAsTitle = prefs[Keys.QS_TILE_COUNTDOWN_AS_TITLE] ?: false,
             qsTileClickAction = QsTileClickAction.fromStorage(prefs[Keys.QS_TILE_CLICK_ACTION]),
             breakShowPostponeButton = prefs[Keys.BREAK_SHOW_POSTPONE_BUTTON] ?: true,
@@ -209,6 +211,7 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE] =
                 settings.persistentNotificationContentTemplate.trim()
                     .ifBlank { DEFAULT_PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE }
+            prefs[Keys.HAS_ADDED_QS_TILE] = settings.hasAddedQsTile
             prefs[Keys.QS_TILE_COUNTDOWN_AS_TITLE] = settings.qsTileCountdownAsTitle
             prefs[Keys.QS_TILE_CLICK_ACTION] = settings.qsTileClickAction.storageValue
             prefs[Keys.BREAK_SHOW_POSTPONE_BUTTON] = settings.breakShowPostponeButton
@@ -228,6 +231,12 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.HAS_ADDED_EXTERNAL_PAUSE_APP_ONCE] = settings.hasAddedExternalPauseAppOnce
             prefs[Keys.RESTORE_ENABLED_STATE_ON_START] = settings.restoreEnabledStateOnStart
             prefs[Keys.REENABLE_ON_SCREEN_UNLOCK] = settings.reenableOnScreenUnlock
+        }
+    }
+
+    suspend fun setHasAddedQsTile(added: Boolean) {
+        context.settingsDataStore.edit { prefs ->
+            prefs[Keys.HAS_ADDED_QS_TILE] = added
         }
     }
 
@@ -269,6 +278,7 @@ class SettingsStore(private val context: Context) {
             stringPreferencesKey("persistent_notification_title_template")
         val PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE =
             stringPreferencesKey("persistent_notification_content_template")
+        val HAS_ADDED_QS_TILE = booleanPreferencesKey("has_added_qs_tile")
         val QS_TILE_COUNTDOWN_AS_TITLE = booleanPreferencesKey("qs_tile_countdown_as_title")
         val QS_TILE_CLICK_ACTION = intPreferencesKey("qs_tile_click_action")
         val BREAK_SHOW_POSTPONE_BUTTON = booleanPreferencesKey("break_show_postpone_button")
