@@ -80,8 +80,8 @@
     <string name="settings_pause_app_list_enabled_whitelist">按名单暂停计时</string>
     <string name="settings_pause_app_list_enabled_blacklist">仅在名单内计时与休息</string>
     <string name="settings_app_blacklist_mode">黑名单模式</string>
-    <string name="settings_app_list_hint_whitelist">启用下列开关后，在下方所选应用处于前台时暂停计时（白名单）。</string>
-    <string name="settings_app_list_hint_blacklist">启用下列开关后，仅在下方所选应用处于前台时计时（黑名单）。</string>
+    <string name="settings_app_list_hint_whitelist">上面的开关关闭时，在下方所选应用处于前台时暂停计时（白名单）。</string>
+    <string name="settings_app_list_hint_blacklist">上面的开关开启时，仅在下方所选应用处于前台时计时（黑名单）。</string>
     <string name="settings_manage_pause_app_list">管理应用列表</string>
     <string name="settings_pause_app_list_screen_title_whitelist">白名单</string>
     <string name="settings_pause_app_list_screen_title_blacklist">黑名单</string>
