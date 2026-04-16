@@ -6,16 +6,19 @@ import android.content.Intent
 import android.content.IntentFilter
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -23,6 +26,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -40,11 +44,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.delay
@@ -149,7 +155,7 @@ fun SettingsPage(
         DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE
     }
     var appSearch by remember { mutableStateOf("") }
-    var openSubPage by remember { mutableStateOf(false) }
+    var showPauseAppListPage by remember { mutableStateOf(false) }
     var overlayPreviewVisible by remember { mutableStateOf(false) }
     val previewController = remember(context.applicationContext) {
         BreakOverlayController(
@@ -166,17 +172,17 @@ fun SettingsPage(
         }
     }
 
-    LaunchedEffect(openSubPage) {
-        if (openSubPage) {
+    LaunchedEffect(showPauseAppListPage) {
+        if (showPauseAppListPage) {
             overlayPreviewVisible = false
         }
     }
 
-    BackHandler(enabled = openSubPage) {
-        openSubPage = false
+    BackHandler(enabled = showPauseAppListPage) {
+        showPauseAppListPage = false
     }
 
-    BackHandler(enabled = overlayPreviewVisible && !openSubPage) {
+    BackHandler(enabled = overlayPreviewVisible && !showPauseAppListPage) {
         overlayPreviewVisible = false
     }
 
@@ -274,40 +280,57 @@ fun SettingsPage(
             it.packageName.contains(appSearch, ignoreCase = true)
     }
 
-    if (openSubPage) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+    if (showPauseAppListPage) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 56.dp)
+                    .padding(horizontal = 4.dp),
             ) {
+                IconButton(
+                    onClick = { showPauseAppListPage = false },
+                    modifier = Modifier.align(Alignment.CenterStart),
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.action_back),
+                    )
+                }
                 Text(
-                    stringResource(
+                    text = stringResource(
                         when (appListMode) {
-                            AppListMode.WHITELIST -> R.string.settings_app_subpage_title_whitelist
-                            AppListMode.BLACKLIST -> R.string.settings_app_subpage_title_blacklist
+                            AppListMode.WHITELIST -> R.string.settings_pause_app_list_screen_title_whitelist
+                            AppListMode.BLACKLIST -> R.string.settings_pause_app_list_screen_title_blacklist
                         },
                     ),
                     style = MaterialTheme.typography.titleLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.Center)
+                        .padding(start = 56.dp, end = 16.dp),
                 )
-                Button(onClick = { openSubPage = false }) {
-                    Text(stringResource(R.string.action_back))
-                }
             }
 
-            AppSelectionSection(
-                appSearch = appSearch,
-                onAppSearchChange = { appSearch = it },
-                selectedPackages = selectedPackages,
-                filteredApps = filteredApps,
-                onMonitoredAppsChange = onMonitoredAppsChange,
-            )
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                AppSelectionSection(
+                    appSearch = appSearch,
+                    onAppSearchChange = { appSearch = it },
+                    selectedPackages = selectedPackages,
+                    filteredApps = filteredApps,
+                    onMonitoredAppsChange = onMonitoredAppsChange,
+                )
+            }
         }
         return
     }
@@ -500,9 +523,9 @@ fun SettingsPage(
 
         Button(onClick = {
             onSpecificAppsPageOpened()
-            openSubPage = true
+            showPauseAppListPage = true
         }) {
-            Text(stringResource(R.string.settings_open_app_subpage))
+            Text(stringResource(R.string.settings_manage_pause_app_list))
         }
         Text(
             text = stringResource(R.string.settings_selected_apps_count, selectedPackages.size),
@@ -873,7 +896,7 @@ private fun AppSelectionSection(
         modifier = Modifier.fillMaxWidth(),
         value = appSearch,
         onValueChange = onAppSearchChange,
-        label = { Text(stringResource(R.string.settings_app_search)) },
+        label = { Text(stringResource(R.string.settings_pause_app_list_filter)) },
     )
     Text(
         text = stringResource(R.string.settings_selected_apps_count, selectedPackages.size),
