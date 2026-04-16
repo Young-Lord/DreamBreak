@@ -47,6 +47,7 @@ data class AppSettings(
     val persistentNotificationTitleTemplate: String = DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE,
     val persistentNotificationContentTemplate: String = DEFAULT_PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE,
     val qsTileCountdownAsTitle: Boolean = false,
+    val qsTileClickAction: QsTileClickAction = QsTileClickAction.TOGGLE_ENABLED,
     val breakShowPostponeButton: Boolean = true,
     val breakShowTitle: Boolean = true,
     val breakShowCountdown: Boolean = true,
@@ -134,6 +135,7 @@ class SettingsStore(private val context: Context) {
                 prefs[Keys.PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE]
                     ?: DEFAULT_PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE,
             qsTileCountdownAsTitle = prefs[Keys.QS_TILE_COUNTDOWN_AS_TITLE] ?: false,
+            qsTileClickAction = QsTileClickAction.fromStorage(prefs[Keys.QS_TILE_CLICK_ACTION]),
             breakShowPostponeButton = prefs[Keys.BREAK_SHOW_POSTPONE_BUTTON] ?: true,
             breakShowTitle = prefs[Keys.BREAK_SHOW_TITLE] ?: true,
             breakShowCountdown = prefs[Keys.BREAK_SHOW_COUNTDOWN] ?: true,
@@ -208,6 +210,7 @@ class SettingsStore(private val context: Context) {
                 settings.persistentNotificationContentTemplate.trim()
                     .ifBlank { DEFAULT_PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE }
             prefs[Keys.QS_TILE_COUNTDOWN_AS_TITLE] = settings.qsTileCountdownAsTitle
+            prefs[Keys.QS_TILE_CLICK_ACTION] = settings.qsTileClickAction.storageValue
             prefs[Keys.BREAK_SHOW_POSTPONE_BUTTON] = settings.breakShowPostponeButton
             prefs[Keys.BREAK_SHOW_TITLE] = settings.breakShowTitle
             prefs[Keys.BREAK_SHOW_COUNTDOWN] = settings.breakShowCountdown
@@ -267,6 +270,7 @@ class SettingsStore(private val context: Context) {
         val PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE =
             stringPreferencesKey("persistent_notification_content_template")
         val QS_TILE_COUNTDOWN_AS_TITLE = booleanPreferencesKey("qs_tile_countdown_as_title")
+        val QS_TILE_CLICK_ACTION = intPreferencesKey("qs_tile_click_action")
         val BREAK_SHOW_POSTPONE_BUTTON = booleanPreferencesKey("break_show_postpone_button")
         val BREAK_SHOW_TITLE = booleanPreferencesKey("break_show_title")
         val BREAK_SHOW_COUNTDOWN = booleanPreferencesKey("break_show_countdown")

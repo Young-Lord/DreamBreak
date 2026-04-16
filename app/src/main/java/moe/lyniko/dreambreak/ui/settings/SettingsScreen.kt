@@ -62,6 +62,7 @@ import moe.lyniko.dreambreak.core.normalizePostponeDurationInput
 import moe.lyniko.dreambreak.core.parsePostponeDurations
 import moe.lyniko.dreambreak.data.AppListMode
 import moe.lyniko.dreambreak.data.AppThemeMode
+import moe.lyniko.dreambreak.data.QsTileClickAction
 import moe.lyniko.dreambreak.monitor.InstalledApp
 import moe.lyniko.dreambreak.notification.BreakReminderService
 import moe.lyniko.dreambreak.overlay.BreakOverlayController
@@ -102,6 +103,7 @@ fun SettingsPage(
     persistentNotificationTitleTemplate: String,
     persistentNotificationContentTemplate: String,
     qsTileCountdownAsTitle: Boolean,
+    qsTileClickAction: QsTileClickAction,
     breakShowPostponeButton: Boolean,
     breakShowTitle: Boolean,
     breakShowCountdown: Boolean,
@@ -129,6 +131,7 @@ fun SettingsPage(
     onPersistentNotificationTitleTemplateChange: (String) -> Unit,
     onPersistentNotificationContentTemplateChange: (String) -> Unit,
     onQsTileCountdownAsTitleChange: (Boolean) -> Unit,
+    onQsTileClickActionChange: (QsTileClickAction) -> Unit,
     onBreakShowPostponeButtonChange: (Boolean) -> Unit,
     onBreakShowTitleChange: (Boolean) -> Unit,
     onBreakShowCountdownChange: (Boolean) -> Unit,
@@ -600,6 +603,10 @@ fun SettingsPage(
                 onCheckedChange = onQsTileCountdownAsTitleChange,
             )
         }
+        QsTileClickActionDropdownRow(
+            selectedAction = qsTileClickAction,
+            onQsTileClickActionChange = onQsTileClickActionChange,
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.settings_pre_break_notification), modifier = Modifier.weight(1f))
             Switch(
@@ -674,6 +681,69 @@ fun SettingsPage(
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.settings_exclude_from_recents), modifier = Modifier.weight(1f))
             Switch(checked = excludeFromRecents, onCheckedChange = onExcludeFromRecentsChange)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun QsTileClickActionDropdownRow(
+    selectedAction: QsTileClickAction,
+    onQsTileClickActionChange: (QsTileClickAction) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val options = listOf(
+        QsTileClickAction.NONE to stringResource(R.string.settings_qs_tile_click_action_none),
+        QsTileClickAction.OPEN_APP to stringResource(R.string.settings_qs_tile_click_action_open_app),
+        QsTileClickAction.OPEN_POSTPONE_PICKER to stringResource(R.string.settings_qs_tile_click_action_open_postpone),
+        QsTileClickAction.TOGGLE_ENABLED to stringResource(R.string.settings_qs_tile_click_action_toggle),
+    )
+    val selectedLabel = options.firstOrNull { it.first == selectedAction }?.second
+        ?: stringResource(R.string.settings_qs_tile_click_action_toggle)
+
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            stringResource(R.string.settings_qs_tile_click_action),
+            modifier = Modifier.weight(1f),
+        )
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded },
+            modifier = Modifier.width(180.dp),
+        ) {
+            TextField(
+                value = selectedLabel,
+                onValueChange = {},
+                readOnly = true,
+                singleLine = true,
+                trailingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = null,
+                    )
+                },
+                modifier = Modifier.menuAnchor(
+                    type = MenuAnchorType.PrimaryNotEditable,
+                    enabled = true,
+                ),
+            )
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+            ) {
+                options.forEach { (action, label) ->
+                    DropdownMenuItem(
+                        text = { Text(text = label) },
+                        onClick = {
+                            onQsTileClickActionChange(action)
+                            expanded = false
+                        },
+                    )
+                }
+            }
         }
     }
 }

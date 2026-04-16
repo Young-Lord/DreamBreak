@@ -107,6 +107,11 @@
     <string name="settings_persistent_notification_content_template">Persistent notification content template</string>
     <string name="settings_persistent_notification_placeholders">Placeholders: $doneSmallBreak, $doneBigBreak, $timeToNextBreak, $nextBreakType</string>
     <string name="settings_qs_tile_countdown_as_title">Show tile countdown as title</string>
+    <string name="settings_qs_tile_click_action">Quick settings tile tap</string>
+    <string name="settings_qs_tile_click_action_none">None</string>
+    <string name="settings_qs_tile_click_action_open_app">Open app home</string>
+    <string name="settings_qs_tile_click_action_open_postpone">Open postpone duration picker</string>
+    <string name="settings_qs_tile_click_action_toggle">Enable / disable (default)</string>
     <string name="settings_pre_break_notification">Pre-break Android notification</string>
     <string name="settings_pre_break_notification_lead_seconds">Pre-break notification lead time (sec)</string>
     <string name="settings_pre_break_notification_small_title">Pre-break title (small break)</string>

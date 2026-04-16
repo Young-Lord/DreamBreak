@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import moe.lyniko.dreambreak.data.AppListMode
 import moe.lyniko.dreambreak.data.AppSettings
 import moe.lyniko.dreambreak.data.AppThemeMode
+import moe.lyniko.dreambreak.data.QsTileClickAction
 
 data class BreakUiState(
     val preferences: BreakPreferences = BreakPreferences(),
@@ -33,6 +34,7 @@ data class BreakUiState(
     val persistentNotificationTitleTemplate: String = DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE,
     val persistentNotificationContentTemplate: String = DEFAULT_PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE,
     val qsTileCountdownAsTitle: Boolean = false,
+    val qsTileClickAction: QsTileClickAction = QsTileClickAction.TOGGLE_ENABLED,
     val breakShowPostponeButton: Boolean = true,
     val breakShowTitle: Boolean = true,
     val breakShowCountdown: Boolean = true,
@@ -83,6 +85,7 @@ fun AppSettings.applyToUiState(current: BreakUiState, isFirstLoad: Boolean = fal
         persistentNotificationTitleTemplate = persistentNotificationTitleTemplate,
         persistentNotificationContentTemplate = persistentNotificationContentTemplate,
         qsTileCountdownAsTitle = qsTileCountdownAsTitle,
+        qsTileClickAction = qsTileClickAction,
         breakShowPostponeButton = breakShowPostponeButton,
         breakShowTitle = breakShowTitle,
         breakShowCountdown = breakShowCountdown,
@@ -120,6 +123,7 @@ fun BreakUiState.toAppSettings(): AppSettings = AppSettings(
     persistentNotificationTitleTemplate = persistentNotificationTitleTemplate,
     persistentNotificationContentTemplate = persistentNotificationContentTemplate,
     qsTileCountdownAsTitle = qsTileCountdownAsTitle,
+    qsTileClickAction = qsTileClickAction,
     breakShowPostponeButton = breakShowPostponeButton,
     breakShowTitle = breakShowTitle,
     breakShowCountdown = breakShowCountdown,
@@ -336,6 +340,10 @@ object BreakRuntime {
 
     fun setQsTileCountdownAsTitle(enabled: Boolean) {
         updateUiState { current -> current.copy(qsTileCountdownAsTitle = enabled) }
+    }
+
+    fun setQsTileClickAction(action: QsTileClickAction) {
+        updateUiState { current -> current.copy(qsTileClickAction = action) }
     }
 
     fun setThemeMode(mode: AppThemeMode) {

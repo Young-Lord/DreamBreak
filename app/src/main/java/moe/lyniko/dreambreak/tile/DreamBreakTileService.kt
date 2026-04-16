@@ -1,5 +1,7 @@
 package moe.lyniko.dreambreak.tile
 
+import android.app.PendingIntent
+import android.content.Intent
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.service.quicksettings.Tile
@@ -20,11 +22,21 @@ import moe.lyniko.dreambreak.core.BreakPreferences
 import moe.lyniko.dreambreak.core.BreakRuntime
 import moe.lyniko.dreambreak.core.BreakState
 import moe.lyniko.dreambreak.core.SessionMode
+import moe.lyniko.dreambreak.MainActivity
 import moe.lyniko.dreambreak.data.AppSettings
+import moe.lyniko.dreambreak.data.QsTileClickAction
 import moe.lyniko.dreambreak.data.SettingsStore
+import moe.lyniko.dreambreak.notification.PostponePickerActivity
 import moe.lyniko.dreambreak.startup.RuntimeBootstrap
 
 class DreamBreakTileService : TileService() {
+
+    private companion object {
+        /** Distinguishes [PendingIntent]s so Main vs postpone launcher do not collide. */
+        private const val PENDING_INTENT_REQUEST_MAIN = 0x7101
+        private const val PENDING_INTENT_REQUEST_POSTPONE_PICKER = 0x7102
+    }
+
     private val scope = CoroutineScope(SupervisorJob() + Main.immediate)
     private val settingsStore by lazy { SettingsStore(applicationContext) }
 
@@ -63,23 +75,56 @@ class DreamBreakTileService : TileService() {
         scope.launch {
             val appContext = applicationContext
             val currentSettings = settingsStore.settingsFlow.first()
-            val nextEnabled = !BreakRuntime.uiState.value.appEnabled
+            when (currentSettings.qsTileClickAction) {
+                QsTileClickAction.NONE -> return@launch
+                QsTileClickAction.OPEN_APP -> {
+                    launchActivityFromTile(
+                        Intent(appContext, MainActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        },
+                        requestCode = PENDING_INTENT_REQUEST_MAIN,
+                    )
+                }
+                QsTileClickAction.OPEN_POSTPONE_PICKER -> {
+                    launchActivityFromTile(
+                        Intent(appContext, PostponePickerActivity::class.java),
+                        requestCode = PENDING_INTENT_REQUEST_POSTPONE_PICKER,
+                    )
+                }
+                QsTileClickAction.TOGGLE_ENABLED -> {
+                    val nextEnabled = !BreakRuntime.uiState.value.appEnabled
+                    val effectiveEnabled = BreakRuntime.setAppEnabled(nextEnabled)
+                    settingsStore.save(currentSettings.copy(appEnabled = effectiveEnabled))
 
-            val effectiveEnabled = BreakRuntime.setAppEnabled(nextEnabled)
-            settingsStore.save(currentSettings.copy(appEnabled = effectiveEnabled))
+                    if (effectiveEnabled) {
+                        RuntimeBootstrap.startRuntimeAndMonitors(appContext)
+                    }
+                    RuntimeBootstrap.syncReminderService(appContext)
 
-            if (effectiveEnabled) {
-                RuntimeBootstrap.startRuntimeAndMonitors(appContext)
+                    val uiState = BreakRuntime.uiState.value
+                    updateTile(
+                        appEnabled = uiState.appEnabled,
+                        state = uiState.state,
+                        preferences = uiState.preferences,
+                        qsTileCountdownAsTitle = uiState.qsTileCountdownAsTitle,
+                    )
+                }
             }
-            RuntimeBootstrap.syncReminderService(appContext)
+        }
+    }
 
-            val uiState = BreakRuntime.uiState.value
-            updateTile(
-                appEnabled = uiState.appEnabled,
-                state = uiState.state,
-                preferences = uiState.preferences,
-                qsTileCountdownAsTitle = uiState.qsTileCountdownAsTitle,
+    private fun launchActivityFromTile(intent: Intent, requestCode: Int) {
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            val pendingIntent = PendingIntent.getActivity(
+                applicationContext,
+                requestCode,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
+            startActivityAndCollapse(pendingIntent)
+        } else {
+            startActivity(intent)
         }
     }
 

@@ -198,6 +198,7 @@ fun DreamBreakApp() {
                             persistentNotificationContentTemplate =
                                 uiState.persistentNotificationContentTemplate,
                             qsTileCountdownAsTitle = uiState.qsTileCountdownAsTitle,
+                            qsTileClickAction = uiState.qsTileClickAction,
                             breakShowPostponeButton = uiState.breakShowPostponeButton,
                             breakShowTitle = uiState.breakShowTitle,
                             breakShowCountdown = uiState.breakShowCountdown,
@@ -295,6 +296,9 @@ fun DreamBreakApp() {
                             },
                             onQsTileCountdownAsTitleChange = {
                                 BreakRuntime.setQsTileCountdownAsTitle(it)
+                            },
+                            onQsTileClickActionChange = {
+                                BreakRuntime.setQsTileClickAction(it)
                             },
                             onBreakShowPostponeButtonChange = {
                                 BreakRuntime.setBreakShowPostponeButton(it)
