@@ -46,9 +46,7 @@ class ScreenLockReceiver : BroadcastReceiver() {
                     val pendingResult = goAsync()
                     CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
                         runCatching {
-                            val store = SettingsStore(appContext)
-                            val disk = store.settingsFlow.first()
-                            store.save(disk.copy(appEnabled = updatedUiState.appEnabled))
+                            SettingsStore(appContext).updateAppEnabled(updatedUiState.appEnabled)
                         }
                         pendingResult.finish()
                     }

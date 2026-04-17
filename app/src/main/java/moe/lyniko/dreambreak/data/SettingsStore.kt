@@ -234,6 +234,12 @@ class SettingsStore(private val context: Context) {
         }
     }
 
+    suspend fun updateAppEnabled(enabled: Boolean) {
+        context.settingsDataStore.edit { prefs ->
+            prefs[Keys.APP_ENABLED] = enabled
+        }
+    }
+
     suspend fun setHasAddedQsTile(added: Boolean) {
         context.settingsDataStore.edit { prefs ->
             prefs[Keys.HAS_ADDED_QS_TILE] = added

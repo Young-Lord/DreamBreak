@@ -113,7 +113,7 @@ class DreamBreakTileService : TileService() {
                 QsTileClickAction.TOGGLE_ENABLED -> {
                     val nextEnabled = !BreakRuntime.uiState.value.appEnabled
                     val effectiveEnabled = BreakRuntime.setAppEnabled(nextEnabled)
-                    settingsStore.save(currentSettings.copy(appEnabled = effectiveEnabled))
+                    withContext(Dispatchers.IO) { settingsStore.updateAppEnabled(effectiveEnabled) }
 
                     if (effectiveEnabled) {
                         RuntimeBootstrap.startRuntimeAndMonitors(appContext)
