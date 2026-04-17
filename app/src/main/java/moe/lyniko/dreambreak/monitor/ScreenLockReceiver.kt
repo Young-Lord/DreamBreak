@@ -7,10 +7,10 @@ import android.content.IntentFilter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import moe.lyniko.dreambreak.MainActivity
 import moe.lyniko.dreambreak.core.BreakRuntime
-import moe.lyniko.dreambreak.core.toAppSettings
 import moe.lyniko.dreambreak.data.SettingsStore
 import moe.lyniko.dreambreak.notification.BreakReminderService
 
@@ -27,6 +27,7 @@ class ScreenLockReceiver : BroadcastReceiver() {
         when (intent.action) {
             Intent.ACTION_SCREEN_OFF -> BreakRuntime.setScreenLocked(true)
             Intent.ACTION_USER_PRESENT -> {
+                val beforeUnlockUiState = BreakRuntime.uiState.value
                 BreakRuntime.setScreenLocked(false)
                 BreakRuntime.start()
 
@@ -39,10 +40,16 @@ class ScreenLockReceiver : BroadcastReceiver() {
                     BreakReminderService.start(appContext)
                 }
 
-                if (updatedUiState.appEnabled) {
+                // Only persist when unlock logic changes enable state.
+                // Avoid overwriting disk settings with default runtime fields before settings are restored.
+                if (beforeUnlockUiState.appEnabled != updatedUiState.appEnabled) {
                     val pendingResult = goAsync()
                     CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-                        runCatching { SettingsStore(appContext).save(updatedUiState.toAppSettings()) }
+                        runCatching {
+                            val store = SettingsStore(appContext)
+                            val disk = store.settingsFlow.first()
+                            store.save(disk.copy(appEnabled = updatedUiState.appEnabled))
+                        }
                         pendingResult.finish()
                     }
                 }

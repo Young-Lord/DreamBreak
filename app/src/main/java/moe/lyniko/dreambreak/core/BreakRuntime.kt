@@ -102,7 +102,8 @@ fun AppSettings.applyToUiState(current: BreakUiState, isFirstLoad: Boolean = fal
         restoreEnabledStateOnStart = restoreEnabledStateOnStart,
         reenableOnScreenUnlock = reenableOnScreenUnlock,
         state = current.state.copy(
-            secondsToNextBreak = current.state.secondsToNextBreak.coerceAtMost(preferences.smallEvery)
+            // Keep live countdown (including postpone). Only ensure it's non-negative.
+            secondsToNextBreak = current.state.secondsToNextBreak.coerceAtLeast(0)
         )
     )
 }
@@ -184,7 +185,8 @@ object BreakRuntime {
             current.copy(
             preferences = preferences,
             state = current.state.copy(
-                secondsToNextBreak = current.state.secondsToNextBreak.coerceAtMost(preferences.smallEvery)
+                // Do not clamp to smallEvery; postpone can legitimately extend the countdown.
+                secondsToNextBreak = current.state.secondsToNextBreak.coerceAtLeast(0)
             )
         )
         }
