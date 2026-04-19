@@ -153,6 +153,49 @@ class BreakEngineTest {
     }
 
     @Test
+    fun `postpone while app-paused during break exits break but stays paused until foreground changes`() {
+        var state = BreakEngine.requestBreakNow(BreakState.initial(preferences), preferences)
+        repeat(2) {
+            state = BreakEngine.tick(state, preferences)
+        }
+
+        state = BreakEngine.setPauseReason(state, PauseReason.SLEEP, active = true, preferences = preferences)
+        assertEquals(SessionMode.PAUSED, state.mode)
+        assertEquals(SessionMode.BREAK, state.modeBeforePause)
+
+        state = BreakEngine.postponeBreakForSeconds(state, 900)
+
+        assertEquals(SessionMode.PAUSED, state.mode)
+        assertEquals(SessionMode.NORMAL, state.modeBeforePause)
+        assertEquals(null, state.phase)
+        assertEquals(900, state.secondsToNextBreak)
+
+        state = BreakEngine.setPauseReason(state, PauseReason.SLEEP, active = false, preferences = preferences)
+        assertEquals(SessionMode.NORMAL, state.mode)
+        assertEquals(900, state.secondsToNextBreak)
+    }
+
+    @Test
+    fun `app open during break finishes break then pauses normal countdown`() {
+        var state = BreakEngine.requestBreakNow(BreakState.initial(preferences), preferences)
+        repeat(2) {
+            state = BreakEngine.tick(state, preferences)
+        }
+
+        state = BreakEngine.setPauseReason(state, PauseReason.APP_OPEN, active = true, preferences = preferences)
+
+        assertEquals(SessionMode.PAUSED, state.mode)
+        assertEquals(SessionMode.NORMAL, state.modeBeforePause)
+        assertEquals(null, state.phase)
+        assertEquals(preferences.smallEvery, state.secondsToNextBreak)
+        assertEquals(1, state.completedSmallBreaks)
+
+        state = BreakEngine.setPauseReason(state, PauseReason.APP_OPEN, active = false, preferences = preferences)
+        assertEquals(SessionMode.NORMAL, state.mode)
+        assertEquals(preferences.smallEvery, state.secondsToNextBreak)
+    }
+
+    @Test
     fun `resuming from app pause resets countdown floor to interval`() {
         var state = BreakState.initial(preferences)
         state = BreakEngine.tick(state, preferences)
@@ -229,7 +272,12 @@ class BreakEngineTest {
     @Test
     fun `complete break session also works for paused break`() {
         var state = BreakEngine.requestBreakNow(BreakState.initial(preferences), preferences)
-        state = BreakEngine.setPauseReason(state, PauseReason.APP_OPEN, active = true, preferences = preferences)
+        repeat(2) {
+            state = BreakEngine.tick(state, preferences)
+        }
+        state = BreakEngine.setPauseReason(state, PauseReason.SLEEP, active = true, preferences = preferences)
+        assertEquals(SessionMode.PAUSED, state.mode)
+        assertEquals(SessionMode.BREAK, state.modeBeforePause)
 
         state = BreakEngine.completeBreakSession(state, preferences)
 

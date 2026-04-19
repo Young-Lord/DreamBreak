@@ -1,6 +1,7 @@
 package moe.lyniko.dreambreak.monitor
 
 import android.content.Context
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -12,9 +13,13 @@ import moe.lyniko.dreambreak.core.BreakRuntime
 import moe.lyniko.dreambreak.data.AppListMode
 
 object AppPauseMonitor {
+    private const val TAG = "DreamBreak"
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val startLock = Any()
     private var monitorJob: Job? = null
+    private var lastShouldPause: Boolean? = null
+    private var lastTopPackage: String? = null
 
     fun start(context: Context) {
         val appContext = context.applicationContext
@@ -40,6 +45,16 @@ object AppPauseMonitor {
                         monitoredApps = uiState.monitoredApps,
                         monitoredAppsBlacklist = uiState.monitoredAppsBlacklist,
                     )
+                    val topPackage = ForegroundAppMonitor.currentForegroundPackage(appContext)
+                    if (shouldPause != lastShouldPause || topPackage != lastTopPackage) {
+                        Log.d(
+                            TAG,
+                            "appPause transition shouldPause=$shouldPause (was $lastShouldPause) " +
+                                "topPackage=$topPackage (was $lastTopPackage)",
+                        )
+                        lastShouldPause = shouldPause
+                        lastTopPackage = topPackage
+                    }
                     BreakRuntime.setAppPauseActive(shouldPause)
                     delay(CHECK_INTERVAL_MILLIS)
                 }

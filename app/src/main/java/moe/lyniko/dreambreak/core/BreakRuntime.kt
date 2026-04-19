@@ -1,5 +1,6 @@
 package moe.lyniko.dreambreak.core
 
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -144,6 +145,8 @@ fun BreakUiState.toAppSettings(): AppSettings = AppSettings(
 )
 
 object BreakRuntime {
+    private const val TAG = "DreamBreak"
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var tickerJob: Job? = null
     private val stateLock = Any()
@@ -204,6 +207,17 @@ object BreakRuntime {
                 active = active,
                 preferences = current.preferences,
             )
+            if (
+                current.state.mode != nextState.mode ||
+                current.state.modeBeforePause != nextState.modeBeforePause
+            ) {
+                Log.d(
+                    TAG,
+                    "setAppPauseActive(active=$active) mode ${current.state.mode}->${nextState.mode} " +
+                        "modeBeforePause ${current.state.modeBeforePause}->${nextState.modeBeforePause} " +
+                        "phase=${nextState.phase} breakSecondsRemaining=${nextState.breakSecondsRemaining}",
+                )
+            }
             current.copy(state = nextState)
         }
     }
@@ -435,9 +449,21 @@ object BreakRuntime {
             if (!current.appEnabled) {
                 return@updateUiState current
             }
-            current.copy(
-                state = BreakEngine.postponeBreakForSeconds(current.state, seconds)
+            val before = current.state
+            Log.d(
+                TAG,
+                "postponeBreakForSeconds($seconds) before mode=${before.mode} " +
+                    "modeBeforePause=${before.modeBeforePause} phase=${before.phase} " +
+                    "pauseReasons=${before.pauseReasons} secondsToNextBreak=${before.secondsToNextBreak}",
             )
+            val next = BreakEngine.postponeBreakForSeconds(current.state, seconds)
+            Log.d(
+                TAG,
+                "postponeBreakForSeconds($seconds) after mode=${next.mode} " +
+                    "modeBeforePause=${next.modeBeforePause} phase=${next.phase} " +
+                    "secondsToNextBreak=${next.secondsToNextBreak}",
+            )
+            current.copy(state = next)
         }
     }
 

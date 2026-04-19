@@ -1,6 +1,9 @@
 package moe.lyniko.dreambreak.core
 
+import android.util.Log
 import kotlin.math.max
+
+private const val ENGINE_LOG_TAG = "DreamBreak"
 
 const val DEFAULT_TOP_FLASH_SECONDS = 8
 const val DEFAULT_PRE_BREAK_NOTIFICATION_SECONDS = 30
@@ -122,12 +125,34 @@ object BreakEngine {
                 if (!shouldPause) {
                     state.copy(pauseReasons = updatedReasons)
                 } else {
-                    state.copy(
+                    // Opening another app (APP_OPEN) during a break hides the overlay; treat that as
+                    // ending the current break session immediately, then pause the normal countdown
+                    // while the foreground app is disallowed — do not resume the same BREAK later.
+                    val stateBase =
+                        if (active && reason == PauseReason.APP_OPEN && state.mode == SessionMode.BREAK) {
+                            val finished = finishBreakAndStartNextCycle(state, preferences)
+                            Log.d(
+                                ENGINE_LOG_TAG,
+                                "APP_OPEN during BREAK: finish break then pause; " +
+                                    "secondsToNextBreak=${finished.secondsToNextBreak} completedSmall=${finished.completedSmallBreaks}",
+                            )
+                            finished
+                        } else {
+                            state
+                        }
+                    val next = stateBase.copy(
                         mode = SessionMode.PAUSED,
-                        modeBeforePause = state.mode,
+                        modeBeforePause = stateBase.mode,
                         pauseReasons = updatedReasons,
                         secondsPaused = 0,
                     )
+                    Log.d(
+                        ENGINE_LOG_TAG,
+                        "enter PAUSED reason=$reason active=$active savedMode=${state.mode} " +
+                            "modeBeforePause=${next.modeBeforePause} phase=${next.phase} " +
+                            "secondsToNextBreak=${next.secondsToNextBreak}",
+                    )
+                    return next
                 }
             }
         }
@@ -144,6 +169,12 @@ object BreakEngine {
         } else {
             state.secondsToNextBreak
         }
+        Log.d(
+            ENGINE_LOG_TAG,
+            "resume from PAUSED resumedMode=$resumedMode shouldResetCountdownAfterPause=$shouldResetCountdownAfterPause " +
+                "secondsBefore=${state.secondsToNextBreak} secondsAfter=$resumedSecondsToNextBreak " +
+                "hadPauseReasons=${state.pauseReasons} clearedReason=$reason clearedActive=$active",
+        )
         return state.copy(
             mode = resumedMode,
             modeBeforePause = null,
@@ -164,10 +195,42 @@ object BreakEngine {
 
     fun postponeBreakForSeconds(state: BreakState, seconds: Int): BreakState {
         val safeSeconds = max(seconds, 1)
-        if (state.mode != SessionMode.BREAK) {
+        // While paused for APP_OPEN during a break, mode is PAUSED and modeBeforePause is BREAK.
+        // Treat that as "still in break" so postpone exits the session; otherwise we only bump
+        // secondsToNextBreak and resumeBreak later restores BREAK (overlay returns immediately).
+        val wasBreakSession =
+            state.mode == SessionMode.BREAK ||
+                (state.mode == SessionMode.PAUSED && state.modeBeforePause == SessionMode.BREAK)
+        if (!wasBreakSession) {
+            Log.d(
+                ENGINE_LOG_TAG,
+                "postponeBreakForSeconds nonBreakBump seconds=$safeSeconds " +
+                    "secondsToNextBreak=${state.secondsToNextBreak}->${max(state.secondsToNextBreak, safeSeconds)}",
+            )
             return state.copy(secondsToNextBreak = max(state.secondsToNextBreak, safeSeconds))
         }
 
+        if (state.mode == SessionMode.PAUSED && state.modeBeforePause == SessionMode.BREAK) {
+            Log.d(
+                ENGINE_LOG_TAG,
+                "postponeBreakForSeconds pausedBreakExit safeSeconds=$safeSeconds mode=${state.mode} " +
+                    "modeBeforePause=${state.modeBeforePause}",
+            )
+            return state.copy(
+                mode = SessionMode.PAUSED,
+                modeBeforePause = SessionMode.NORMAL,
+                phase = null,
+                isBigBreak = false,
+                promptSecondsElapsed = 0,
+                breakSecondsRemaining = 0,
+                secondsToNextBreak = safeSeconds,
+            )
+        }
+
+        Log.d(
+            ENGINE_LOG_TAG,
+            "postponeBreakForSeconds exitBreakToNormal safeSeconds=$safeSeconds mode=${state.mode}",
+        )
         return state.copy(
             mode = SessionMode.NORMAL,
             phase = null,

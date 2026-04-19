@@ -2,6 +2,7 @@ package moe.lyniko.dreambreak.overlay
 
 import android.content.Context
 import android.content.res.Configuration
+import android.util.Log
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.Typeface
@@ -33,6 +34,8 @@ import moe.lyniko.dreambreak.core.DEFAULT_POSTPONE_DURATIONS_SECONDS
 import moe.lyniko.dreambreak.core.DEFAULT_TOP_FLASH_BIG_TEXT
 import moe.lyniko.dreambreak.core.DEFAULT_TOP_FLASH_SMALL_TEXT
 import moe.lyniko.dreambreak.core.SessionMode
+
+private const val OVERLAY_LOG_TAG = "DreamBreak"
 
 class BreakOverlayController(
     private val context: Context,
@@ -618,6 +621,7 @@ class BreakOverlayController(
             .alpha(0f)
             .setDuration(fadeOutDurationMs.toLong())
             .withEndAction {
+                Log.d(OVERLAY_LOG_TAG, "fullScreen overlay fade-out animation ended (removing view)")
                 removeOverlayView(view = view)
             }
             .start()

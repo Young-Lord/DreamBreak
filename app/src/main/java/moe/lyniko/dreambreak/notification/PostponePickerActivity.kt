@@ -1,6 +1,7 @@
 package moe.lyniko.dreambreak.notification
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -54,6 +55,7 @@ class PostponePickerActivity : ComponentActivity() {
                 PostponePickerScreen(
                     options = settings.preferences.postponeFor,
                     onSelect = { seconds ->
+                        Log.d("DreamBreak", "PostponePicker selected seconds=$seconds")
                         BreakRuntime.postponeBreakForSeconds(seconds)
                         finish()
                     },

@@ -1,5 +1,6 @@
 package moe.lyniko.dreambreak.ui.home
 
+import android.util.Log
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -20,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -32,6 +34,8 @@ import moe.lyniko.dreambreak.R
 import moe.lyniko.dreambreak.core.BreakPreferences
 import moe.lyniko.dreambreak.core.BreakState
 import moe.lyniko.dreambreak.core.SessionMode
+
+private const val HOME_LOG_TAG = "DreamBreak"
 
 @Composable
 fun HomePage(
@@ -49,6 +53,25 @@ fun HomePage(
         label = "homeToggleBackgroundColor",
     )
     val nextBreaks = remember(state, preferences) { buildHomeNextBreaks(state, preferences) }
+
+    LaunchedEffect(
+        state.mode,
+        state.modeBeforePause,
+        state.phase,
+        state.breakSecondsRemaining,
+        state.secondsToNextBreak,
+        state.breakCycleCount,
+        preferences.smallEvery,
+        preferences.bigAfter,
+    ) {
+        val built = buildHomeNextBreaks(state, preferences)
+        Log.d(
+            HOME_LOG_TAG,
+            "HomeScreen nextBreaks=${built.map { "${it.isBigBreak}:${it.secondsUntil}" }} " +
+                "mode=${state.mode} modeBeforePause=${state.modeBeforePause} phase=${state.phase} " +
+                "breakSecondsRemaining=${state.breakSecondsRemaining} secondsToNextBreak=${state.secondsToNextBreak}",
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -173,6 +196,11 @@ private fun buildHomeNextBreaks(state: BreakState, preferences: BreakPreferences
     ).sortedBy { it.secondsUntil }
 }
 
+private fun isEffectiveBreakSession(state: BreakState): Boolean {
+    return state.mode == SessionMode.BREAK ||
+        (state.mode == SessionMode.PAUSED && state.modeBeforePause == SessionMode.BREAK)
+}
+
 private fun secondsUntilBreakType(
     state: BreakState,
     preferences: BreakPreferences,
@@ -183,12 +211,13 @@ private fun secondsUntilBreakType(
     }
 
     val intervalSeconds = preferences.smallEvery.coerceAtLeast(1)
-    val baseCycle = if (state.mode == SessionMode.BREAK) {
+    val inBreakSession = isEffectiveBreakSession(state)
+    val baseCycle = if (inBreakSession) {
         state.breakCycleCount
     } else {
         state.breakCycleCount + 1
     }
-    val baseSeconds = if (state.mode == SessionMode.BREAK) {
+    val baseSeconds = if (inBreakSession) {
         0
     } else {
         state.secondsToNextBreak.coerceAtLeast(0)
