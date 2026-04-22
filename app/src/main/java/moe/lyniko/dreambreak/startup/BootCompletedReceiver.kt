@@ -24,7 +24,7 @@ class BootCompletedReceiver : BroadcastReceiver() {
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             runCatching {
                 val appContext = context.applicationContext
-                val settings = RuntimeBootstrap.restoreFromDisk(appContext)
+                val settings = RuntimeBootstrap.restoreFromDisk(appContext, isFirstLoad = true)
                 val effectiveAppEnabled = BreakRuntime.uiState.value.appEnabled
                 val shouldStartRuntime = when (action) {
                     Intent.ACTION_MY_PACKAGE_REPLACED -> effectiveAppEnabled

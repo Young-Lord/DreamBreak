@@ -1,5 +1,9 @@
 package moe.lyniko.dreambreak.notification
 
+import android.app.ActivityManager
+import android.content.Context
+import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -40,12 +44,19 @@ class PostponePickerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         BreakRuntime.start()
+
+        // Best-effort: avoid briefly appearing in recents before settings are loaded.
+        applyExcludeFromRecents(BreakRuntime.uiState.value.excludeFromRecents)
+
         setContent {
             val context = LocalContext.current
             val settingsStore = remember(context.applicationContext) {
                 SettingsStore(context.applicationContext)
             }
             val settings by settingsStore.settingsFlow.collectAsState(initial = AppSettings())
+            androidx.compose.runtime.LaunchedEffect(settings.excludeFromRecents) {
+                applyExcludeFromRecents(settings.excludeFromRecents)
+            }
             val darkTheme = when (settings.themeMode) {
                 AppThemeMode.FOLLOW_SYSTEM -> isSystemInDarkTheme()
                 AppThemeMode.LIGHT -> false
@@ -63,6 +74,22 @@ class PostponePickerActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        applyExcludeFromRecents(BreakRuntime.uiState.value.excludeFromRecents)
+    }
+
+    private fun applyExcludeFromRecents(exclude: Boolean) {
+        if (!exclude) return
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) return
+        val am = getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager ?: return
+        am.appTasks.forEach { task ->
+            task.setExcludeFromRecents(true)
+        }
+        // Also set on intent for some OEM taskers.
+        intent?.addFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
     }
 }
 

@@ -496,6 +496,7 @@ class BreakReminderService : Service() {
     private fun postponePickerPendingIntent(): PendingIntent {
         val intent = Intent(this, PostponePickerActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            addFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
         }
         return PendingIntent.getActivity(
             this,

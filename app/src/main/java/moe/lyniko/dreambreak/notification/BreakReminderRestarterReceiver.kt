@@ -19,7 +19,7 @@ class BreakReminderRestarterReceiver : BroadcastReceiver() {
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             runCatching {
                 val appContext = context.applicationContext
-                RuntimeBootstrap.restoreFromDisk(appContext)
+                RuntimeBootstrap.restoreFromDisk(appContext, isFirstLoad = true)
                 RuntimeBootstrap.startRuntimeAndMonitors(appContext)
                 RuntimeBootstrap.syncReminderService(appContext)
             }

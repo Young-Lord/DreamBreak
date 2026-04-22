@@ -134,6 +134,7 @@ class DreamBreakTileService : TileService() {
 
     private fun launchActivityFromTile(intent: Intent, requestCode: Int) {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        intent.addFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             val pendingIntent = PendingIntent.getActivity(
                 applicationContext,

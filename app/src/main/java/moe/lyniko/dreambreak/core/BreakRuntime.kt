@@ -58,6 +58,24 @@ private fun BreakUiState.isBreakCycleEnableUnlocked(): Boolean {
         hasAddedExternalPauseAppOnce
 }
 
+private fun BreakUiState.isPristineRuntimeState(): Boolean {
+    val s = state
+    return preferences == BreakPreferences() &&
+        s.mode == SessionMode.NORMAL &&
+        s.phase == null &&
+        s.isBigBreak == false &&
+        s.promptSecondsElapsed == 0 &&
+        s.breakSecondsRemaining == 0 &&
+        s.pauseReasons.isEmpty() &&
+        s.modeBeforePause == null &&
+        s.secondsSinceLastBreak == 0 &&
+        s.secondsPaused == 0 &&
+        s.breakCycleCount == 0 &&
+        s.completedSmallBreaks == 0 &&
+        s.completedBigBreaks == 0 &&
+        s.secondsToNextBreak == BreakPreferences().smallEvery
+}
+
 fun AppSettings.applyToUiState(current: BreakUiState, isFirstLoad: Boolean = false): BreakUiState {
     val isBreakCycleEnableUnlocked =
         hasVisitedSpecificAppsPage && hasEnabledPauseInListedAppsOnce && hasAddedExternalPauseAppOnce
@@ -67,6 +85,13 @@ fun AppSettings.applyToUiState(current: BreakUiState, isFirstLoad: Boolean = fal
         isFirstLoad && !restoreEnabledStateOnStart -> isBreakCycleEnableUnlocked
         !restoreEnabledStateOnStart -> current.appEnabled && isBreakCycleEnableUnlocked
         else -> appEnabled && isBreakCycleEnableUnlocked
+    }
+
+    val shouldResetCountdownFromPreferences = isFirstLoad && current.isPristineRuntimeState()
+    val restoredSecondsToNextBreak = if (shouldResetCountdownFromPreferences) {
+        preferences.smallEvery.coerceAtLeast(1)
+    } else {
+        current.state.secondsToNextBreak.coerceAtLeast(0)
     }
     return current.copy(
         preferences = preferences,
@@ -103,8 +128,7 @@ fun AppSettings.applyToUiState(current: BreakUiState, isFirstLoad: Boolean = fal
         restoreEnabledStateOnStart = restoreEnabledStateOnStart,
         reenableOnScreenUnlock = reenableOnScreenUnlock,
         state = current.state.copy(
-            // Keep live countdown (including postpone). Only ensure it's non-negative.
-            secondsToNextBreak = current.state.secondsToNextBreak.coerceAtLeast(0)
+            secondsToNextBreak = restoredSecondsToNextBreak
         )
     )
 }
