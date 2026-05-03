@@ -53,7 +53,7 @@ class BreakOverlayController(
     private var fullRemainingView: TextView? = null
     private var fullExitButton: Button? = null
     private var postponeOptionsPanel: LinearLayout? = null
-    private var lastBackgroundUri: String = ""
+    private var lastOverlayBackgroundSettingsKey: String = ""
     private var currentPostponeOptions: List<Int> = DEFAULT_POSTPONE_DURATIONS_SECONDS
     private var currentShowPostponeButton: Boolean = true
     private var currentShowTitle: Boolean = true
@@ -439,27 +439,37 @@ class BreakOverlayController(
             return
         }
 
-        val normalizedUri = resolveBackgroundUri(
-            overlayBackgroundPortraitUri = overlayBackgroundPortraitUri,
-            overlayBackgroundLandscapeUri = overlayBackgroundLandscapeUri,
+        val settingsKey = overlayBackgroundSettingsKey(
+            overlayBackgroundPortraitUri,
+            overlayBackgroundLandscapeUri,
         )
-        if (normalizedUri.isBlank()) {
+        val candidates = candidateBackgroundUris(
+            overlayBackgroundPortraitUri,
+            overlayBackgroundLandscapeUri,
+        )
+
+        if (candidates.isEmpty()) {
             imageView.visibility = View.GONE
             imageView.setImageDrawable(null)
-            lastBackgroundUri = ""
+            lastOverlayBackgroundSettingsKey = ""
+        } else if (settingsKey == lastOverlayBackgroundSettingsKey) {
+            // Background layer already configured for this settings snapshot.
         } else {
-            if (lastBackgroundUri != normalizedUri) {
-                runCatching {
-                    imageView.setImageURI(Uri.parse(normalizedUri))
-                    lastBackgroundUri = normalizedUri
-                    imageView.visibility = View.VISIBLE
-                }.onFailure {
-                    imageView.setImageDrawable(null)
-                    imageView.visibility = View.GONE
-                    lastBackgroundUri = ""
+            var loaded = false
+            for (uriString in candidates) {
+                if (uriReadable(uriString)) {
+                    imageView.setImageURI(Uri.parse(uriString))
+                    loaded = true
+                    break
                 }
-            } else {
+            }
+            if (loaded) {
                 imageView.visibility = View.VISIBLE
+                lastOverlayBackgroundSettingsKey = settingsKey
+            } else {
+                imageView.visibility = View.GONE
+                imageView.setImageDrawable(null)
+                lastOverlayBackgroundSettingsKey = ""
             }
         }
 
@@ -469,19 +479,51 @@ class BreakOverlayController(
         dimLayer.alpha = dimAlpha
     }
 
-    private fun resolveBackgroundUri(
+    private fun overlayBackgroundSettingsKey(
         overlayBackgroundPortraitUri: String,
         overlayBackgroundLandscapeUri: String,
     ): String {
         val portraitUri = overlayBackgroundPortraitUri.trim()
         val landscapeUri = overlayBackgroundLandscapeUri.trim()
+        val orientation =
+            if (context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                "L"
+            } else {
+                "P"
+            }
+        return "$portraitUri|$landscapeUri|$orientation"
+    }
+
+    private fun candidateBackgroundUris(
+        overlayBackgroundPortraitUri: String,
+        overlayBackgroundLandscapeUri: String,
+    ): List<String> {
+        val portraitUri = overlayBackgroundPortraitUri.trim()
+        val landscapeUri = overlayBackgroundLandscapeUri.trim()
         val isLandscape =
             context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        return if (isLandscape) {
+        val primary = if (isLandscape) {
             landscapeUri.ifBlank { portraitUri }
         } else {
             portraitUri.ifBlank { landscapeUri }
         }
+        val alternate = if (isLandscape) portraitUri else landscapeUri
+        return buildList {
+            if (primary.isNotBlank()) add(primary)
+            if (alternate.isNotBlank() && alternate != primary) add(alternate)
+        }
+    }
+
+    private fun uriReadable(uriString: String): Boolean {
+        if (uriString.isBlank()) {
+            return false
+        }
+        val uri = runCatching { Uri.parse(uriString.trim()) }.getOrNull() ?: return false
+        return runCatching {
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                input.read() != -1
+            } == true
+        }.getOrDefault(false)
     }
 
     private fun buildPostponePanel(options: List<Int>): LinearLayout {
@@ -603,7 +645,7 @@ class BreakOverlayController(
         fullRemainingView = null
         fullExitButton = null
         postponeOptionsPanel = null
-        lastBackgroundUri = ""
+        lastOverlayBackgroundSettingsKey = ""
         currentShowPostponeButton = true
         currentShowTitle = true
         currentShowCountdown = true
