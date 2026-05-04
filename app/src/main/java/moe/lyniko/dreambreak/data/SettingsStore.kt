@@ -56,6 +56,7 @@ data class AppSettings(
     val breakExitPostponeSeconds: Int = DEFAULT_POSTPONE_DURATION_SECONDS,
     val breakOverlayFadeInDurationMs: Int = 300,
     val breakOverlayFadeOutDurationMs: Int = 300,
+    val breakOverlayFadeOutKeepOpaque: Boolean = false,
     val themeMode: AppThemeMode = AppThemeMode.FOLLOW_SYSTEM,
     val hasVisitedSpecificAppsPage: Boolean = false,
     val hasEnabledPauseInListedAppsOnce: Boolean = false,
@@ -150,6 +151,8 @@ class SettingsStore(private val context: Context) {
             breakOverlayFadeOutDurationMs =
                 (prefs[Keys.BREAK_OVERLAY_FADE_OUT_DURATION_MS] ?: legacyOverlayAnimationDurationMs)
                     .coerceIn(OVERLAY_ANIMATION_DURATION_MIN, OVERLAY_ANIMATION_DURATION_MAX),
+            breakOverlayFadeOutKeepOpaque =
+                prefs[Keys.BREAK_OVERLAY_FADE_OUT_KEEP_OPAQUE] ?: false,
             themeMode = AppThemeMode.fromStorage(prefs[Keys.THEME_MODE]),
             hasVisitedSpecificAppsPage =
                 prefs[Keys.HAS_VISITED_SPECIFIC_APPS_PAGE] ?: inferredVisitedSpecificAppsPage,
@@ -223,6 +226,7 @@ class SettingsStore(private val context: Context) {
                 settings.breakOverlayFadeInDurationMs.coerceIn(OVERLAY_ANIMATION_DURATION_MIN, OVERLAY_ANIMATION_DURATION_MAX)
             prefs[Keys.BREAK_OVERLAY_FADE_OUT_DURATION_MS] =
                 settings.breakOverlayFadeOutDurationMs.coerceIn(OVERLAY_ANIMATION_DURATION_MIN, OVERLAY_ANIMATION_DURATION_MAX)
+            prefs[Keys.BREAK_OVERLAY_FADE_OUT_KEEP_OPAQUE] = settings.breakOverlayFadeOutKeepOpaque
             prefs[Keys.BREAK_OVERLAY_ANIMATION_DURATION_MS] =
                 settings.breakOverlayFadeInDurationMs.coerceIn(OVERLAY_ANIMATION_DURATION_MIN, OVERLAY_ANIMATION_DURATION_MAX)
             prefs[Keys.THEME_MODE] = settings.themeMode.storageValue
@@ -294,6 +298,8 @@ class SettingsStore(private val context: Context) {
         val BREAK_EXIT_POSTPONE_SECONDS = intPreferencesKey("break_exit_postpone_seconds")
         val BREAK_OVERLAY_FADE_IN_DURATION_MS = intPreferencesKey("break_overlay_fade_in_duration_ms")
         val BREAK_OVERLAY_FADE_OUT_DURATION_MS = intPreferencesKey("break_overlay_fade_out_duration_ms")
+        val BREAK_OVERLAY_FADE_OUT_KEEP_OPAQUE =
+            booleanPreferencesKey("break_overlay_fade_out_keep_opaque")
         val BREAK_OVERLAY_ANIMATION_DURATION_MS = intPreferencesKey("break_overlay_animation_duration_ms")
         val THEME_MODE = intPreferencesKey("theme_mode")
         val HAS_VISITED_SPECIFIC_APPS_PAGE =

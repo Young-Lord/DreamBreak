@@ -62,6 +62,7 @@ class BreakOverlayController(
     private var currentExitPostponeSeconds: Int = DEFAULT_POSTPONE_DURATION_SECONDS
     private var currentOverlayFadeInDurationMs: Int = 300
     private var currentOverlayFadeOutDurationMs: Int = 300
+    private var currentOverlayFadeOutKeepOpaque: Boolean = false
 
     fun render(
         state: BreakState,
@@ -77,6 +78,7 @@ class BreakOverlayController(
         exitPostponeSeconds: Int,
         overlayFadeInDurationMs: Int,
         overlayFadeOutDurationMs: Int,
+        overlayFadeOutKeepOpaque: Boolean,
         topFlashSmallText: String,
         topFlashBigText: String,
     ) {
@@ -122,6 +124,7 @@ class BreakOverlayController(
                 exitPostponeSeconds = exitPostponeSeconds.coerceAtLeast(1),
                 overlayFadeInDurationMs = overlayFadeInDurationMs.coerceIn(OVERLAY_ANIMATION_DURATION_MIN, OVERLAY_ANIMATION_DURATION_MAX),
                 overlayFadeOutDurationMs = overlayFadeOutDurationMs.coerceIn(OVERLAY_ANIMATION_DURATION_MIN, OVERLAY_ANIMATION_DURATION_MAX),
+                overlayFadeOutKeepOpaque = overlayFadeOutKeepOpaque,
             )
         } else {
             hideFullScreenOverlay()
@@ -197,6 +200,7 @@ class BreakOverlayController(
         exitPostponeSeconds: Int,
         overlayFadeInDurationMs: Int,
         overlayFadeOutDurationMs: Int,
+        overlayFadeOutKeepOpaque: Boolean,
     ) {
         if (
             fullScreenView != null && (
@@ -207,7 +211,8 @@ class BreakOverlayController(
                     currentShowExitButton != showExitButton ||
                     currentExitPostponeSeconds != exitPostponeSeconds ||
                     currentOverlayFadeInDurationMs != overlayFadeInDurationMs ||
-                    currentOverlayFadeOutDurationMs != overlayFadeOutDurationMs
+                    currentOverlayFadeOutDurationMs != overlayFadeOutDurationMs ||
+                    currentOverlayFadeOutKeepOpaque != overlayFadeOutKeepOpaque
                 )
         ) {
             hideFullScreenOverlay(skipAnimation = true)
@@ -412,6 +417,7 @@ class BreakOverlayController(
             currentExitPostponeSeconds = exitPostponeSeconds
             currentOverlayFadeInDurationMs = overlayFadeInDurationMs
             currentOverlayFadeOutDurationMs = overlayFadeOutDurationMs
+        currentOverlayFadeOutKeepOpaque = overlayFadeOutKeepOpaque
         }
 
         applyOverlayBackground(
@@ -652,21 +658,35 @@ class BreakOverlayController(
         currentShowExitButton = true
         currentExitPostponeSeconds = DEFAULT_POSTPONE_DURATION_SECONDS
         val fadeOutDurationMs = currentOverlayFadeOutDurationMs
+        val keepOpaqueDuringFadeOut = currentOverlayFadeOutKeepOpaque
         currentOverlayFadeInDurationMs = 300
         currentOverlayFadeOutDurationMs = 300
+        currentOverlayFadeOutKeepOpaque = false
         if (skipAnimation || fadeOutDurationMs <= 0) {
             removeOverlayView(view = view)
             return
         }
         view.animate().cancel()
-        view.animate()
-            .alpha(0f)
-            .setDuration(fadeOutDurationMs.toLong())
-            .withEndAction {
-                Log.d(OVERLAY_LOG_TAG, "fullScreen overlay fade-out animation ended (removing view)")
-                removeOverlayView(view = view)
-            }
-            .start()
+        if (keepOpaqueDuringFadeOut) {
+            view.alpha = 1f
+            view.animate()
+                .alpha(1f)
+                .setDuration(fadeOutDurationMs.toLong())
+                .withEndAction {
+                    Log.d(OVERLAY_LOG_TAG, "fullScreen overlay fade-out animation ended (removing view)")
+                    removeOverlayView(view = view)
+                }
+                .start()
+        } else {
+            view.animate()
+                .alpha(0f)
+                .setDuration(fadeOutDurationMs.toLong())
+                .withEndAction {
+                    Log.d(OVERLAY_LOG_TAG, "fullScreen overlay fade-out animation ended (removing view)")
+                    removeOverlayView(view = view)
+                }
+                .start()
+        }
     }
 
     private fun removeOverlayView(view: View) {

@@ -128,6 +128,7 @@ fun SettingsPage(
     breakExitPostponeSeconds: Int,
     breakOverlayFadeInDurationMs: Int,
     breakOverlayFadeOutDurationMs: Int,
+    breakOverlayFadeOutKeepOpaque: Boolean,
     themeMode: AppThemeMode,
     onPreferencesChange: (BreakPreferences) -> Unit,
     onPauseInListedAppsChange: (Boolean) -> Unit,
@@ -156,6 +157,7 @@ fun SettingsPage(
     onBreakExitPostponeSecondsChange: (Int) -> Unit,
     onBreakOverlayFadeInDurationMsChange: (Int) -> Unit,
     onBreakOverlayFadeOutDurationMsChange: (Int) -> Unit,
+    onBreakOverlayFadeOutKeepOpaqueChange: (Boolean) -> Unit,
     onOpenPreBreakNotificationChannelSettings: () -> Unit,
     onSpecificAppsPageOpened: () -> Unit,
 ) {
@@ -248,6 +250,7 @@ fun SettingsPage(
         breakExitPostponeSeconds,
         breakOverlayFadeInDurationMs,
         breakOverlayFadeOutDurationMs,
+        breakOverlayFadeOutKeepOpaque,
     ) {
         if (!overlayPreviewVisible) {
             previewController.release()
@@ -276,6 +279,7 @@ fun SettingsPage(
             exitPostponeSeconds = breakExitPostponeSeconds,
             overlayFadeInDurationMs = breakOverlayFadeInDurationMs,
             overlayFadeOutDurationMs = breakOverlayFadeOutDurationMs,
+            overlayFadeOutKeepOpaque = breakOverlayFadeOutKeepOpaque,
             topFlashSmallText = preferences.topFlashSmallText,
             topFlashBigText = preferences.topFlashBigText,
         )
@@ -495,6 +499,16 @@ fun SettingsPage(
             defaultValue = BREAK_OVERLAY_FADE_DURATION_DEFAULT_MS,
             onValueChange = onBreakOverlayFadeOutDurationMsChange,
         )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                stringResource(R.string.settings_break_overlay_fade_out_keep_opaque),
+                modifier = Modifier.weight(1f),
+            )
+            Switch(
+                checked = breakOverlayFadeOutKeepOpaque,
+                onCheckedChange = onBreakOverlayFadeOutKeepOpaqueChange,
+            )
+        }
 
         Text(stringResource(R.string.settings_pause), style = MaterialTheme.typography.titleLarge)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {

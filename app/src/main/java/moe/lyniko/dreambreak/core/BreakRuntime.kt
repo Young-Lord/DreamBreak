@@ -44,6 +44,7 @@ data class BreakUiState(
     val breakExitPostponeSeconds: Int = DEFAULT_POSTPONE_DURATION_SECONDS,
     val breakOverlayFadeInDurationMs: Int = 300,
     val breakOverlayFadeOutDurationMs: Int = 300,
+    val breakOverlayFadeOutKeepOpaque: Boolean = false,
     val themeMode: AppThemeMode = AppThemeMode.FOLLOW_SYSTEM,
     val hasVisitedSpecificAppsPage: Boolean = false,
     val hasEnabledPauseInListedAppsOnce: Boolean = false,
@@ -121,6 +122,7 @@ fun AppSettings.applyToUiState(current: BreakUiState, isFirstLoad: Boolean = fal
         breakExitPostponeSeconds = breakExitPostponeSeconds.coerceIn(BREAK_EXIT_POSTPONE_MIN, BREAK_EXIT_POSTPONE_MAX),
         breakOverlayFadeInDurationMs = breakOverlayFadeInDurationMs.coerceIn(OVERLAY_ANIMATION_DURATION_MIN, OVERLAY_ANIMATION_DURATION_MAX),
         breakOverlayFadeOutDurationMs = breakOverlayFadeOutDurationMs.coerceIn(OVERLAY_ANIMATION_DURATION_MIN, OVERLAY_ANIMATION_DURATION_MAX),
+        breakOverlayFadeOutKeepOpaque = breakOverlayFadeOutKeepOpaque,
         themeMode = themeMode,
         hasVisitedSpecificAppsPage = hasVisitedSpecificAppsPage,
         hasEnabledPauseInListedAppsOnce = hasEnabledPauseInListedAppsOnce,
@@ -160,6 +162,7 @@ fun BreakUiState.toAppSettings(): AppSettings = AppSettings(
     breakExitPostponeSeconds = breakExitPostponeSeconds,
     breakOverlayFadeInDurationMs = breakOverlayFadeInDurationMs,
     breakOverlayFadeOutDurationMs = breakOverlayFadeOutDurationMs,
+    breakOverlayFadeOutKeepOpaque = breakOverlayFadeOutKeepOpaque,
     themeMode = themeMode,
     hasVisitedSpecificAppsPage = hasVisitedSpecificAppsPage,
     hasEnabledPauseInListedAppsOnce = hasEnabledPauseInListedAppsOnce,
@@ -432,6 +435,10 @@ object BreakRuntime {
                 )
             )
         }
+    }
+
+    fun setBreakOverlayFadeOutKeepOpaque(enabled: Boolean) {
+        updateUiState { current -> current.copy(breakOverlayFadeOutKeepOpaque = enabled) }
     }
 
     fun setBreakShowTitle(enabled: Boolean) {

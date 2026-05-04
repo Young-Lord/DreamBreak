@@ -228,6 +228,7 @@ fun DreamBreakApp() {
                             breakExitPostponeSeconds = uiState.breakExitPostponeSeconds,
                             breakOverlayFadeInDurationMs = uiState.breakOverlayFadeInDurationMs,
                             breakOverlayFadeOutDurationMs = uiState.breakOverlayFadeOutDurationMs,
+                            breakOverlayFadeOutKeepOpaque = uiState.breakOverlayFadeOutKeepOpaque,
                             themeMode = uiState.themeMode,
                             onPreferencesChange = {
                                 BreakRuntime.updatePreferences(it)
@@ -384,6 +385,10 @@ fun DreamBreakApp() {
                             },
                             onBreakOverlayFadeOutDurationMsChange = {
                                 BreakRuntime.setBreakOverlayFadeOutDurationMs(it)
+                                commitSettings()
+                            },
+                            onBreakOverlayFadeOutKeepOpaqueChange = {
+                                BreakRuntime.setBreakOverlayFadeOutKeepOpaque(it)
                                 commitSettings()
                             },
                             onOpenPreBreakNotificationChannelSettings = {
