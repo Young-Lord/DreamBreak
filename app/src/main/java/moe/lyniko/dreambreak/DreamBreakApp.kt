@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import moe.lyniko.dreambreak.core.BreakRuntime
 import moe.lyniko.dreambreak.core.toAppSettings
@@ -118,6 +119,26 @@ fun DreamBreakApp() {
     LaunchedEffect(Unit) {
         AppPauseMonitor.start(context.applicationContext)
         ScreenLockMonitor.start(context.applicationContext)
+    }
+
+    LaunchedEffect(settingsLoaded, uiState.state.secondsToNextBreak) {
+        if (!settingsLoaded) {
+            return@LaunchedEffect
+        }
+        commitSettings()
+    }
+
+    // Periodically persist runtime state (secondsToNextBreak, breakCycleCount, etc.)
+    // so the countdown survives a reboot. Every 10 s is frequent enough for boot recovery
+    // without excessive DataStore writes.
+    LaunchedEffect(settingsLoaded) {
+        if (!settingsLoaded) {
+            return@LaunchedEffect
+        }
+        while (true) {
+            delay(10_000)
+            commitSettings()
+        }
     }
 
     LaunchedEffect(settingsLoaded, uiState.persistentNotificationEnabled, uiState.appEnabled) {

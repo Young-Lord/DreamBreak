@@ -59,24 +59,6 @@ private fun BreakUiState.isBreakCycleEnableUnlocked(): Boolean {
         hasAddedExternalPauseAppOnce
 }
 
-private fun BreakUiState.isPristineRuntimeState(): Boolean {
-    val s = state
-    return preferences == BreakPreferences() &&
-        s.mode == SessionMode.NORMAL &&
-        s.phase == null &&
-        s.isBigBreak == false &&
-        s.promptSecondsElapsed == 0 &&
-        s.breakSecondsRemaining == 0 &&
-        s.pauseReasons.isEmpty() &&
-        s.modeBeforePause == null &&
-        s.secondsSinceLastBreak == 0 &&
-        s.secondsPaused == 0 &&
-        s.breakCycleCount == 0 &&
-        s.completedSmallBreaks == 0 &&
-        s.completedBigBreaks == 0 &&
-        s.secondsToNextBreak == BreakPreferences().smallEvery
-}
-
 fun AppSettings.applyToUiState(current: BreakUiState, isFirstLoad: Boolean = false): BreakUiState {
     val isBreakCycleEnableUnlocked =
         hasVisitedSpecificAppsPage && hasEnabledPauseInListedAppsOnce && hasAddedExternalPauseAppOnce
@@ -88,8 +70,14 @@ fun AppSettings.applyToUiState(current: BreakUiState, isFirstLoad: Boolean = fal
         else -> appEnabled && isBreakCycleEnableUnlocked
     }
 
-    val shouldResetCountdownFromPreferences = isFirstLoad && current.isPristineRuntimeState()
-    val restoredSecondsToNextBreak = if (shouldResetCountdownFromPreferences) {
+    val shouldRestoreFromPersistedState = isFirstLoad && persistedSecondsToNextBreak >= 0
+    val elapsedSecondsSincePersist =
+        if (shouldRestoreFromPersistedState && persistedBreakStateTimestampEpochMs > 0) {
+            ((System.currentTimeMillis() - persistedBreakStateTimestampEpochMs) / 1000).toInt().coerceAtLeast(0)
+        } else 0
+    val restoredSecondsToNextBreak = if (shouldRestoreFromPersistedState) {
+        (persistedSecondsToNextBreak - elapsedSecondsSincePersist).coerceAtLeast(0)
+    } else if (isFirstLoad) {
         preferences.smallEvery.coerceAtLeast(1)
     } else {
         current.state.secondsToNextBreak.coerceAtLeast(0)
@@ -130,7 +118,10 @@ fun AppSettings.applyToUiState(current: BreakUiState, isFirstLoad: Boolean = fal
         restoreEnabledStateOnStart = restoreEnabledStateOnStart,
         reenableOnScreenUnlock = reenableOnScreenUnlock,
         state = current.state.copy(
-            secondsToNextBreak = restoredSecondsToNextBreak
+            secondsToNextBreak = restoredSecondsToNextBreak,
+            breakCycleCount = if (isFirstLoad) persistedBreakCycleCount else current.state.breakCycleCount,
+            completedSmallBreaks = if (isFirstLoad) persistedCompletedSmallBreaks else current.state.completedSmallBreaks,
+            completedBigBreaks = if (isFirstLoad) persistedCompletedBigBreaks else current.state.completedBigBreaks,
         )
     )
 }
@@ -169,12 +160,18 @@ fun BreakUiState.toAppSettings(): AppSettings = AppSettings(
     hasAddedExternalPauseAppOnce = hasAddedExternalPauseAppOnce,
     restoreEnabledStateOnStart = restoreEnabledStateOnStart,
     reenableOnScreenUnlock = reenableOnScreenUnlock,
+    persistedSecondsToNextBreak = state.secondsToNextBreak,
+    persistedBreakCycleCount = state.breakCycleCount,
+    persistedCompletedSmallBreaks = state.completedSmallBreaks,
+    persistedCompletedBigBreaks = state.completedBigBreaks,
+    persistedBreakStateTimestampEpochMs = System.currentTimeMillis(),
 )
 
 object BreakRuntime {
     private const val TAG = "DreamBreak"
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    @Volatile
     private var tickerJob: Job? = null
     private val stateLock = Any()
 
@@ -192,19 +189,21 @@ object BreakRuntime {
     }
 
     fun start() {
-        if (tickerJob?.isActive == true) {
-            return
-        }
+        synchronized(stateLock) {
+            if (tickerJob?.isActive == true) {
+                return
+            }
 
-        tickerJob = scope.launch {
-            while (isActive) {
-                delay(1000)
-                updateUiState { current ->
-                    if (!current.appEnabled) {
-                        return@updateUiState current
+            tickerJob = scope.launch {
+                while (isActive) {
+                    delay(1000)
+                    updateUiState { current ->
+                        if (!current.appEnabled) {
+                            return@updateUiState current
+                        }
+                        val nextState = BreakEngine.tick(current.state, current.preferences)
+                        current.copy(state = nextState)
                     }
-                    val nextState = BreakEngine.tick(current.state, current.preferences)
-                    current.copy(state = nextState)
                 }
             }
         }

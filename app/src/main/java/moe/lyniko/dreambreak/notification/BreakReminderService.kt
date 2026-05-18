@@ -20,6 +20,8 @@ import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -46,6 +48,7 @@ import moe.lyniko.dreambreak.core.PERSISTENT_NOTIFICATION_PLACEHOLDER_DONE_SMALL
 import moe.lyniko.dreambreak.core.PERSISTENT_NOTIFICATION_PLACEHOLDER_NEXT_BREAK_TYPE
 import moe.lyniko.dreambreak.core.PERSISTENT_NOTIFICATION_PLACEHOLDER_TIME_TO_NEXT_BREAK
 import moe.lyniko.dreambreak.core.SessionMode
+import moe.lyniko.dreambreak.core.toAppSettings
 import moe.lyniko.dreambreak.data.AppSettings
 import moe.lyniko.dreambreak.data.SettingsStore
 import moe.lyniko.dreambreak.monitor.AppPauseMonitor
@@ -56,6 +59,8 @@ import moe.lyniko.dreambreak.startup.RuntimeBootstrap
 class BreakReminderService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Main.immediate)
     private var observeJob: Job? = null
+    private var statePersistJob: Job? = null
+    private val settingsStore by lazy { SettingsStore(applicationContext) }
     private lateinit var overlayController: BreakOverlayController
     private var lastNotifiedState: BreakState? = null
     private var lastNotifiedPreferences: BreakPreferences? = null
@@ -80,6 +85,17 @@ class BreakReminderService : Service() {
             onPostponeBreak = { seconds -> BreakRuntime.postponeBreakForSeconds(seconds) },
         )
         ScreenLockMonitor.start(applicationContext)
+        // Periodically persist runtime state so the countdown survives a service restart / reboot.
+        statePersistJob = scope.launch {
+            while (isActive) {
+                delay(10_000)
+                runCatching {
+                    val current = BreakRuntime.uiState.value
+                    val toSave = current.toAppSettings()
+                    settingsStore.save(toSave)
+                }
+            }
+        }
         observeJob = scope.launch {
             BreakRuntime.uiState.collectLatest { uiState ->
                 val hasPermission = MainActivity.hasNotificationPermission(this@BreakReminderService)
@@ -171,6 +187,7 @@ class BreakReminderService : Service() {
     override fun onDestroy() {
         scheduleRestartIfNeeded()
         observeJob?.cancel()
+        statePersistJob?.cancel()
         overlayController.release()
         NotificationManagerCompat.from(this).cancel(PRE_BREAK_NOTIFICATION_ID)
         scope.cancel()
