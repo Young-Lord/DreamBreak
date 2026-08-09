@@ -85,13 +85,20 @@ class BreakReminderService : Service() {
             onPostponeBreak = { seconds -> BreakRuntime.postponeBreakForSeconds(seconds) },
         )
         ScreenLockMonitor.start(applicationContext)
-        // Periodically persist runtime state so the countdown survives a service restart / reboot.
+        // Persist config and cycle counts periodically so a service restart / reboot restores them.
+        // The countdown itself is intentionally not persisted (a fresh interval starts after
+        // process death). Skip writes when nothing changed since the last save.
         statePersistJob = scope.launch {
+            var lastSaved: AppSettings? = null
             while (isActive) {
                 delay(10_000)
                 runCatching {
                     val current = BreakRuntime.uiState.value
                     val toSave = current.toAppSettings()
+                    if (toSave == lastSaved) {
+                        return@runCatching
+                    }
+                    lastSaved = toSave
                     settingsStore.save(toSave)
                 }
             }

@@ -107,11 +107,11 @@ fun DreamBreakApp() {
     }
 
     LaunchedEffect(settingsStore) {
-        var isFirstLoad = true
         settingsStore.settingsFlow.collect { settings ->
             latestDiskSettings = settings
-            RuntimeBootstrap.applySettings(settings, isFirstLoad = isFirstLoad)
-            isFirstLoad = false
+            // First-load semantics are decided inside BreakRuntime (exactly once per process),
+            // so re-opening the app never resets a live countdown.
+            RuntimeBootstrap.applySettings(settings)
             settingsLoaded = true
         }
     }
@@ -121,22 +121,22 @@ fun DreamBreakApp() {
         ScreenLockMonitor.start(context.applicationContext)
     }
 
-    LaunchedEffect(settingsLoaded, uiState.state.secondsToNextBreak) {
-        if (!settingsLoaded) {
-            return@LaunchedEffect
-        }
-        commitSettings()
-    }
-
-    // Periodically persist runtime state (secondsToNextBreak, breakCycleCount, etc.)
-    // so the countdown survives a reboot. Every 10 s is frequent enough for boot recovery
-    // without excessive DataStore writes.
+    // Persist config and cycle counts periodically so boot recovery restores them.
+    // The countdown itself is intentionally not persisted: after a process death a fresh
+    // interval starts (matches the "cold start = full interval" behavior).
+    // Skip writes when nothing changed since the last save.
     LaunchedEffect(settingsLoaded) {
         if (!settingsLoaded) {
             return@LaunchedEffect
         }
+        var lastSaved: AppSettings? = null
         while (true) {
             delay(10_000)
+            val current = BreakRuntime.uiState.value.toAppSettings()
+            if (current == lastSaved) {
+                continue
+            }
+            lastSaved = current
             commitSettings()
         }
     }

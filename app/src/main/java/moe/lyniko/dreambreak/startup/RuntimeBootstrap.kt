@@ -11,20 +11,14 @@ import moe.lyniko.dreambreak.monitor.ScreenLockMonitor
 import moe.lyniko.dreambreak.notification.BreakReminderService
 
 object RuntimeBootstrap {
-    suspend fun restoreFromDisk(
-        context: Context,
-        isFirstLoad: Boolean = false,
-    ): AppSettings {
+    suspend fun restoreFromDisk(context: Context): AppSettings {
         val settings = SettingsStore(context.applicationContext).settingsFlow.first()
-        BreakRuntime.restoreSettings(settings, isFirstLoad = isFirstLoad)
+        BreakRuntime.restoreSettings(settings)
         return settings
     }
 
-    fun applySettings(
-        settings: AppSettings,
-        isFirstLoad: Boolean = false,
-    ) {
-        BreakRuntime.restoreSettings(settings, isFirstLoad = isFirstLoad)
+    fun applySettings(settings: AppSettings) {
+        BreakRuntime.restoreSettings(settings)
     }
 
     fun startRuntimeAndMonitors(

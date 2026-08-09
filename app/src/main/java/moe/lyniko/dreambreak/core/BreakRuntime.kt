@@ -165,11 +165,12 @@ object BreakRuntime {
     @Volatile
     private var tickerJob: Job? = null
     private val stateLock = Any()
-    // Guarded by stateLock. The first restoreSettings call in this process must behave as a
-    // first load so persisted countdown/cycle counts are restored even when the entry point
-    // is the QS tile service or the persistent-notification service (which both default to
-    // isFirstLoad=false). Without this, the in-memory default secondsToNextBreak (=smallEvery,
-    // i.e. 1200s) leaks into the UI before any disk state is read.
+    // Guarded by stateLock. "First load" is a process-level, exactly-once decision: the first
+    // restoreSettings call in this process initializes runtime progress (countdown, cycle
+    // counts, initial appEnabled) from disk, and every later call only re-applies config.
+    // Callers must NOT be able to force a second first-load by passing a flag, otherwise a
+    // fresh Activity would stomp the live countdown — this is the source of the "timer resets
+    // to smallEvery when opening the app" regression.
     private var hasAppliedInitialSettings = false
 
     private val _uiState = MutableStateFlow(BreakUiState())
@@ -555,11 +556,25 @@ object BreakRuntime {
         }
     }
 
-    fun restoreSettings(settings: AppSettings, isFirstLoad: Boolean = false) {
+    fun restoreSettings(settings: AppSettings) {
         updateUiState { current ->
-            val effectiveFirstLoad = isFirstLoad || !hasAppliedInitialSettings
+            // Exactly-once per process: no caller-provided flag may force a second first-load,
+            // otherwise re-opening the app (fresh Activity) would reset the live countdown.
+            val effectiveFirstLoad = !hasAppliedInitialSettings
             hasAppliedInitialSettings = true
             settings.applyToUiState(current, isFirstLoad = effectiveFirstLoad)
+        }
+    }
+
+    internal fun resetInitialSettingsFlagForTesting() {
+        synchronized(stateLock) {
+            hasAppliedInitialSettings = false
+        }
+    }
+
+    internal fun setSecondsToNextBreakForTesting(seconds: Int) {
+        updateUiState { current ->
+            current.copy(state = current.state.copy(secondsToNextBreak = seconds))
         }
     }
 
