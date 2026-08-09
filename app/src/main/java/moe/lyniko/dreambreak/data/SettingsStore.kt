@@ -64,12 +64,9 @@ data class AppSettings(
     val hasAddedExternalPauseAppOnce: Boolean = false,
     val restoreEnabledStateOnStart: Boolean = false,
     val reenableOnScreenUnlock: Boolean = false,
-    // Persisted runtime state — survives reboot so the countdown does not reset to smallEvery.
-    val persistedSecondsToNextBreak: Int = -1,  // -1 = no saved state, use preferences.smallEvery
     val persistedBreakCycleCount: Int = 0,
     val persistedCompletedSmallBreaks: Int = 0,
     val persistedCompletedBigBreaks: Int = 0,
-    val persistedBreakStateTimestampEpochMs: Long = 0L,
 )
 
 class SettingsStore(private val context: Context) {
@@ -169,11 +166,9 @@ class SettingsStore(private val context: Context) {
                 prefs[Keys.HAS_ADDED_EXTERNAL_PAUSE_APP_ONCE] ?: inferredAddedExternalPauseApp,
             restoreEnabledStateOnStart = prefs[Keys.RESTORE_ENABLED_STATE_ON_START] ?: false,
             reenableOnScreenUnlock = prefs[Keys.REENABLE_ON_SCREEN_UNLOCK] ?: false,
-            persistedSecondsToNextBreak = prefs[Keys.SECONDS_TO_NEXT_BREAK] ?: -1,
             persistedBreakCycleCount = prefs[Keys.BREAK_CYCLE_COUNT] ?: 0,
             persistedCompletedSmallBreaks = prefs[Keys.COMPLETED_SMALL_BREAKS] ?: 0,
             persistedCompletedBigBreaks = prefs[Keys.COMPLETED_BIG_BREAKS] ?: 0,
-            persistedBreakStateTimestampEpochMs = prefs[Keys.BREAK_STATE_TIMESTAMP] ?: 0L,
         )
     }
 
@@ -247,13 +242,9 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.HAS_ADDED_EXTERNAL_PAUSE_APP_ONCE] = settings.hasAddedExternalPauseAppOnce
             prefs[Keys.RESTORE_ENABLED_STATE_ON_START] = settings.restoreEnabledStateOnStart
             prefs[Keys.REENABLE_ON_SCREEN_UNLOCK] = settings.reenableOnScreenUnlock
-            if (settings.persistedSecondsToNextBreak >= 0) {
-                prefs[Keys.SECONDS_TO_NEXT_BREAK] = settings.persistedSecondsToNextBreak
-            }
             prefs[Keys.BREAK_CYCLE_COUNT] = settings.persistedBreakCycleCount
             prefs[Keys.COMPLETED_SMALL_BREAKS] = settings.persistedCompletedSmallBreaks
             prefs[Keys.COMPLETED_BIG_BREAKS] = settings.persistedCompletedBigBreaks
-            prefs[Keys.BREAK_STATE_TIMESTAMP] = settings.persistedBreakStateTimestampEpochMs
         }
     }
 
@@ -331,11 +322,9 @@ class SettingsStore(private val context: Context) {
             booleanPreferencesKey("restore_enabled_state_on_start")
         val REENABLE_ON_SCREEN_UNLOCK =
             booleanPreferencesKey("reenable_on_screen_unlock")
-        val SECONDS_TO_NEXT_BREAK = intPreferencesKey("seconds_to_next_break")
         val BREAK_CYCLE_COUNT = intPreferencesKey("break_cycle_count")
         val COMPLETED_SMALL_BREAKS = intPreferencesKey("completed_small_breaks")
         val COMPLETED_BIG_BREAKS = intPreferencesKey("completed_big_breaks")
-        val BREAK_STATE_TIMESTAMP = longPreferencesKey("break_state_timestamp")
     }
 }
 

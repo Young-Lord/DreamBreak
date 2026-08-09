@@ -16,6 +16,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -51,15 +54,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.roundToInt
 import moe.lyniko.dreambreak.MainActivity
 import moe.lyniko.dreambreak.R
@@ -168,7 +175,7 @@ fun SettingsPage(
     val defaultPersistentNotificationTitleTemplate = remember {
         DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE
     }
-    var appSearch by remember { mutableStateOf("") }
+    var appSearch by remember { mutableStateOf(TextFieldValue("")) }
     var showPauseAppListPage by remember { mutableStateOf(false) }
     var overlayPreviewVisible by remember { mutableStateOf(false) }
     val previewController = remember(context.applicationContext) {
@@ -289,14 +296,21 @@ fun SettingsPage(
         AppListMode.WHITELIST -> monitoredApps
         AppListMode.BLACKLIST -> monitoredAppsBlacklist
     }
-    val selectedPackages = parsePackageList(activeMonitoredAppsCsv)
-    val filteredApps = installedApps.filter {
-        appSearch.isBlank() ||
-            it.label.contains(appSearch, ignoreCase = true) ||
-            it.packageName.contains(appSearch, ignoreCase = true)
+    val selectedPackages = remember(activeMonitoredAppsCsv) {
+        parsePackageList(activeMonitoredAppsCsv)
     }
 
     if (showPauseAppListPage) {
+        // 仅当列表页可见时才计算过滤结果，并用 remember 缓存，避免每次输入都重排整页列表。
+        val searchText = appSearch.text
+        val filteredApps = remember(searchText, installedApps) {
+            installedApps.filter {
+                searchText.isBlank() ||
+                    it.label.contains(searchText, ignoreCase = true) ||
+                    it.packageName.contains(searchText, ignoreCase = true)
+            }
+        }
+
         Column(modifier = Modifier.fillMaxSize()) {
             Box(
                 modifier = Modifier
@@ -955,17 +969,27 @@ private fun PercentageSliderField(
 
 @Composable
 private fun AppSelectionSection(
-    appSearch: String,
-    onAppSearchChange: (String) -> Unit,
+    appSearch: TextFieldValue,
+    onAppSearchChange: (TextFieldValue) -> Unit,
     selectedPackages: Set<String>,
     filteredApps: List<InstalledApp>,
     onMonitoredAppsChange: (String) -> Unit,
 ) {
     TextField(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .doubleTapSelectAll {
+                val textLength = appSearch.text.length
+                if (textLength > 0) {
+                    onAppSearchChange(
+                        appSearch.copy(selection = TextRange(0, textLength))
+                    )
+                }
+            },
         value = appSearch,
         onValueChange = onAppSearchChange,
         label = { Text(stringResource(R.string.settings_pause_app_list_filter)) },
+        singleLine = true,
     )
     Text(
         text = stringResource(R.string.settings_selected_apps_count, selectedPackages.size),
@@ -995,6 +1019,30 @@ private fun AppSelectionSection(
                 )
             }
         }
+    }
+}
+
+/**
+ * 在 TextField 上叠加“双击全选”手势。
+ *
+ * Compose 1.7 的 TextField 只内置单击（放光标）与长按（选择），双击等同单击。
+ * 这里手动检测双击，并在确认后消费第二段按下/抬起事件，阻止 TextField 内部再把
+ * 光标放回去覆盖全选选区。滚动、长按等会被消费或取消的手势不会误触发全选。
+ */
+private fun Modifier.doubleTapSelectAll(
+    onDoubleTap: () -> Unit,
+): Modifier = pointerInput(Unit) {
+    val doubleTapTimeoutMillis = viewConfiguration.doubleTapTimeoutMillis
+    awaitEachGesture {
+        val firstDown = awaitFirstDown(requireUnconsumed = false)
+        val firstUp = waitForUpOrCancellation() ?: return@awaitEachGesture
+        val secondDown = withTimeoutOrNull(doubleTapTimeoutMillis) {
+            awaitFirstDown(requireUnconsumed = false)
+        } ?: return@awaitEachGesture
+        secondDown.consume()
+        val secondUp = waitForUpOrCancellation() ?: return@awaitEachGesture
+        secondUp.consume()
+        onDoubleTap()
     }
 }
 

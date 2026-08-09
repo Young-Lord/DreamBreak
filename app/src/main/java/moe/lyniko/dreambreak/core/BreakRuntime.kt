@@ -70,14 +70,7 @@ fun AppSettings.applyToUiState(current: BreakUiState, isFirstLoad: Boolean = fal
         else -> appEnabled && isBreakCycleEnableUnlocked
     }
 
-    val shouldRestoreFromPersistedState = isFirstLoad && persistedSecondsToNextBreak >= 0
-    val elapsedSecondsSincePersist =
-        if (shouldRestoreFromPersistedState && persistedBreakStateTimestampEpochMs > 0) {
-            ((System.currentTimeMillis() - persistedBreakStateTimestampEpochMs) / 1000).toInt().coerceAtLeast(0)
-        } else 0
-    val restoredSecondsToNextBreak = if (shouldRestoreFromPersistedState) {
-        (persistedSecondsToNextBreak - elapsedSecondsSincePersist).coerceAtLeast(0)
-    } else if (isFirstLoad) {
+    val restoredSecondsToNextBreak = if (isFirstLoad) {
         preferences.smallEvery.coerceAtLeast(1)
     } else {
         current.state.secondsToNextBreak.coerceAtLeast(0)
@@ -160,11 +153,9 @@ fun BreakUiState.toAppSettings(): AppSettings = AppSettings(
     hasAddedExternalPauseAppOnce = hasAddedExternalPauseAppOnce,
     restoreEnabledStateOnStart = restoreEnabledStateOnStart,
     reenableOnScreenUnlock = reenableOnScreenUnlock,
-    persistedSecondsToNextBreak = state.secondsToNextBreak,
     persistedBreakCycleCount = state.breakCycleCount,
     persistedCompletedSmallBreaks = state.completedSmallBreaks,
     persistedCompletedBigBreaks = state.completedBigBreaks,
-    persistedBreakStateTimestampEpochMs = System.currentTimeMillis(),
 )
 
 object BreakRuntime {
@@ -174,6 +165,12 @@ object BreakRuntime {
     @Volatile
     private var tickerJob: Job? = null
     private val stateLock = Any()
+    // Guarded by stateLock. The first restoreSettings call in this process must behave as a
+    // first load so persisted countdown/cycle counts are restored even when the entry point
+    // is the QS tile service or the persistent-notification service (which both default to
+    // isFirstLoad=false). Without this, the in-memory default secondsToNextBreak (=smallEvery,
+    // i.e. 1200s) leaks into the UI before any disk state is read.
+    private var hasAppliedInitialSettings = false
 
     private val _uiState = MutableStateFlow(BreakUiState())
     val uiState: StateFlow<BreakUiState> = _uiState.asStateFlow()
@@ -560,7 +557,9 @@ object BreakRuntime {
 
     fun restoreSettings(settings: AppSettings, isFirstLoad: Boolean = false) {
         updateUiState { current ->
-            settings.applyToUiState(current, isFirstLoad = isFirstLoad)
+            val effectiveFirstLoad = isFirstLoad || !hasAppliedInitialSettings
+            hasAppliedInitialSettings = true
+            settings.applyToUiState(current, isFirstLoad = effectiveFirstLoad)
         }
     }
 
