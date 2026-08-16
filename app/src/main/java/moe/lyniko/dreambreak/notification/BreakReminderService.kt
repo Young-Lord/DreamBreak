@@ -1,5 +1,6 @@
 package moe.lyniko.dreambreak.notification
 
+import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -203,6 +204,7 @@ class BreakReminderService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    @SuppressLint("MissingPermission")
     private fun updateNotificationIfNeeded(
         state: BreakState,
         preferences: BreakPreferences,
@@ -210,6 +212,9 @@ class BreakReminderService : Service() {
         titleTemplate: String,
         contentTemplate: String,
     ) {
+        if (!MainActivity.hasNotificationPermission(this)) {
+            return
+        }
         val safeIntervalSeconds = normalModeUpdateIntervalSeconds.coerceIn(NOTIFICATION_FREQUENCY_MIN, NOTIFICATION_FREQUENCY_MAX)
         val nowElapsedRealtimeMs = SystemClock.elapsedRealtime()
         val content = resolvePersistentNotificationContent(
@@ -331,10 +336,14 @@ class BreakReminderService : Service() {
         lastNotificationElapsedRealtimeMs = atElapsedRealtimeMs
     }
 
+    @SuppressLint("MissingPermission")
     private fun updatePreBreakNotificationIfNeeded(
         state: BreakState,
         preferences: BreakPreferences,
     ) {
+        if (!MainActivity.hasNotificationPermission(this)) {
+            return
+        }
         if (!preferences.preBreakNotificationEnabled) {
             NotificationManagerCompat.from(this).cancel(PRE_BREAK_NOTIFICATION_ID)
             lastPreBreakNotifiedCycle = -1

@@ -1,8 +1,10 @@
 package moe.lyniko.dreambreak.ui.onboarding
 
+import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.provider.Settings
+import androidx.core.net.toUri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -99,7 +101,7 @@ fun OnboardingScreen(
                                     context.startActivity(
                                         Intent(
                                             Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                            Uri.parse("package:${context.packageName}")
+                                            "package:${context.packageName}".toUri()
                                         )
                                     )
                                 }
@@ -112,18 +114,7 @@ fun OnboardingScreen(
                             grantedText = stringResource(R.string.onboarding_battery_granted),
                             buttonText = stringResource(R.string.onboarding_battery_btn),
                             onRequest = {
-                                runCatching {
-                                    context.startActivity(
-                                        Intent(
-                                            Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                                            Uri.parse("package:${context.packageName}")
-                                        )
-                                    )
-                                }.onFailure {
-                                    runCatching {
-                                        context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-                                    }
-                                }
+                                requestIgnoreBatteryOptimizations(context)
                             },
                         )
                         3 -> OnboardingDonePage()
@@ -186,6 +177,22 @@ fun OnboardingScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@SuppressLint("BatteryLife")
+private fun requestIgnoreBatteryOptimizations(context: Context) {
+    runCatching {
+        context.startActivity(
+            Intent(
+                Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                "package:${context.packageName}".toUri()
+            )
+        )
+    }.onFailure {
+        runCatching {
+            context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
         }
     }
 }

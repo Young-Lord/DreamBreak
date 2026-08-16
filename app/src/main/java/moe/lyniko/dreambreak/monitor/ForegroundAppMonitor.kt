@@ -1,5 +1,6 @@
 package moe.lyniko.dreambreak.monitor
 
+import android.annotation.SuppressLint
 import android.app.AppOpsManager
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
@@ -109,7 +110,10 @@ object ForegroundAppMonitor {
     }
 
     @Suppress("DEPRECATION")
+    @SuppressLint("InlinedApi")
     private fun isForegroundEventType(eventType: Int): Boolean {
+        // ACTIVITY_RESUMED is inlined to the same value as MOVE_TO_FOREGROUND (both 1),
+        // so comparing the int on older APIs is safe even though the constant is API 29+.
         return eventType == UsageEvents.Event.ACTIVITY_RESUMED ||
             eventType == UsageEvents.Event.MOVE_TO_FOREGROUND
     }

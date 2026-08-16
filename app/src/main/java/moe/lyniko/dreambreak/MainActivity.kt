@@ -46,17 +46,15 @@ class MainActivity : ComponentActivity() {
     }
 
     fun applyExcludeFromRecentsSetting(exclude: Boolean) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            val am = getSystemService(ACTIVITY_SERVICE) as ActivityManager
-            am.appTasks.forEach { appTask ->
-                appTask.setExcludeFromRecents(exclude)
-            }
+        val am = getSystemService(ACTIVITY_SERVICE) as ActivityManager
+        am.appTasks.forEach { appTask ->
+            appTask.setExcludeFromRecents(exclude)
         }
     }
 
     companion object {
         fun canDrawOverlays(context: Context): Boolean {
-            return Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(context)
+            return Settings.canDrawOverlays(context)
         }
 
         fun isIgnoringBatteryOptimizations(context: Context): Boolean {
@@ -74,21 +72,29 @@ class MainActivity : ComponentActivity() {
         }
 
         fun openNotificationSettings(context: Context) {
-            val settingsIntent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                putExtra("app_package", context.packageName)
-                putExtra("app_uid", context.applicationInfo.uid)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            runCatching {
-                context.startActivity(settingsIntent)
-            }.onFailure {
-                val fallbackIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                    data = Uri.fromParts("package", context.packageName, null)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val settingsIntent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                    putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                    putExtra("app_package", context.packageName)
+                    putExtra("app_uid", context.applicationInfo.uid)
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
-                runCatching { context.startActivity(fallbackIntent) }
+                runCatching {
+                    context.startActivity(settingsIntent)
+                }.onFailure {
+                    openApplicationDetailsSettings(context)
+                }
+            } else {
+                openApplicationDetailsSettings(context)
             }
+        }
+
+        private fun openApplicationDetailsSettings(context: Context) {
+            val fallbackIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.fromParts("package", context.packageName, null)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            runCatching { context.startActivity(fallbackIntent) }
         }
 
         fun openNotificationChannelSettings(context: Context, channelId: String) {

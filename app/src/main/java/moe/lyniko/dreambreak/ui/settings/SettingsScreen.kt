@@ -18,12 +18,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.selectAll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -33,9 +36,9 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -49,17 +52,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.AwaitPointerEventScope
+import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
+import androidx.compose.ui.input.pointer.isOutOfBounds
+import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -175,7 +183,7 @@ fun SettingsPage(
     val defaultPersistentNotificationTitleTemplate = remember {
         DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE
     }
-    var appSearch by remember { mutableStateOf(TextFieldValue("")) }
+    val appSearch = rememberTextFieldState()
     var showPauseAppListPage by remember { mutableStateOf(false) }
     var overlayPreviewVisible by remember { mutableStateOf(false) }
     val previewController = remember(context.applicationContext) {
@@ -302,7 +310,7 @@ fun SettingsPage(
 
     if (showPauseAppListPage) {
         // 仅当列表页可见时才计算过滤结果，并用 remember 缓存，避免每次输入都重排整页列表。
-        val searchText = appSearch.text
+        val searchText = appSearch.text.toString()
         val filteredApps = remember(searchText, installedApps) {
             installedApps.filter {
                 searchText.isBlank() ||
@@ -355,7 +363,6 @@ fun SettingsPage(
             ) {
                 AppSelectionSection(
                     appSearch = appSearch,
-                    onAppSearchChange = { appSearch = it },
                     selectedPackages = selectedPackages,
                     filteredApps = filteredApps,
                     onMonitoredAppsChange = onMonitoredAppsChange,
@@ -821,11 +828,11 @@ private fun QsTileClickActionDropdownRow(
             onExpandedChange = { expanded = !expanded },
             modifier = Modifier.width(180.dp),
         ) {
+            val textState = remember(selectedLabel) { TextFieldState(selectedLabel) }
             TextField(
-                value = selectedLabel,
-                onValueChange = {},
+                state = textState,
                 readOnly = true,
-                singleLine = true,
+                lineLimits = TextFieldLineLimits.SingleLine,
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.Default.ArrowDropDown,
@@ -833,7 +840,7 @@ private fun QsTileClickActionDropdownRow(
                     )
                 },
                 modifier = Modifier.menuAnchor(
-                    type = MenuAnchorType.PrimaryNotEditable,
+                    type = ExposedDropdownMenuAnchorType.PrimaryNotEditable,
                     enabled = true,
                 ),
             )
@@ -883,11 +890,11 @@ private fun ThemeModeDropdownRow(
             onExpandedChange = { expanded = !expanded },
             modifier = Modifier.width(180.dp),
         ) {
+            val textState = remember(selectedLabel) { TextFieldState(selectedLabel) }
             TextField(
-                value = selectedLabel,
-                onValueChange = {},
+                state = textState,
                 readOnly = true,
-                singleLine = true,
+                lineLimits = TextFieldLineLimits.SingleLine,
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.Default.ArrowDropDown,
@@ -895,7 +902,7 @@ private fun ThemeModeDropdownRow(
                     )
                 },
                 modifier = Modifier.menuAnchor(
-                    type = MenuAnchorType.PrimaryNotEditable,
+                    type = ExposedDropdownMenuAnchorType.PrimaryNotEditable,
                     enabled = true,
                 ),
             )
@@ -969,27 +976,22 @@ private fun PercentageSliderField(
 
 @Composable
 private fun AppSelectionSection(
-    appSearch: TextFieldValue,
-    onAppSearchChange: (TextFieldValue) -> Unit,
+    appSearch: TextFieldState,
     selectedPackages: Set<String>,
     filteredApps: List<InstalledApp>,
     onMonitoredAppsChange: (String) -> Unit,
 ) {
     TextField(
+        state = appSearch,
         modifier = Modifier
             .fillMaxWidth()
             .doubleTapSelectAll {
-                val textLength = appSearch.text.length
-                if (textLength > 0) {
-                    onAppSearchChange(
-                        appSearch.copy(selection = TextRange(0, textLength))
-                    )
+                if (appSearch.text.isNotEmpty()) {
+                    appSearch.edit { selectAll() }
                 }
             },
-        value = appSearch,
-        onValueChange = onAppSearchChange,
         label = { Text(stringResource(R.string.settings_pause_app_list_filter)) },
-        singleLine = true,
+        lineLimits = TextFieldLineLimits.SingleLine,
     )
     Text(
         text = stringResource(R.string.settings_selected_apps_count, selectedPackages.size),
@@ -1025,24 +1027,42 @@ private fun AppSelectionSection(
 /**
  * 在 TextField 上叠加“双击全选”手势。
  *
- * Compose 1.7 的 TextField 只内置单击（放光标）与长按（选择），双击等同单击。
- * 这里手动检测双击，并在确认后消费第二段按下/抬起事件，阻止 TextField 内部再把
- * 光标放回去覆盖全选选区。滚动、长按等会被消费或取消的手势不会误触发全选。
+ * 新 TextField / BasicTextField 双击默认选词，不会全选。这里手动检测双击，并在确认后
+ * 消费第二段按下/抬起事件，避免内部再把选区收成光标。滚动、长按等会被消费或取消的
+ * 手势不会误触发全选。
+ *
+ * 用 [modifier.composed] + [rememberUpdatedState] 是因为 pointerInput 协程只在首次
+ * 组合时启动一次，直接捕获 onDoubleTap 会拿到过期的闭包，必须保证每次双击都执行最新回调。
  */
 private fun Modifier.doubleTapSelectAll(
     onDoubleTap: () -> Unit,
-): Modifier = pointerInput(Unit) {
-    val doubleTapTimeoutMillis = viewConfiguration.doubleTapTimeoutMillis
-    awaitEachGesture {
-        val firstDown = awaitFirstDown(requireUnconsumed = false)
-        val firstUp = waitForUpOrCancellation() ?: return@awaitEachGesture
-        val secondDown = withTimeoutOrNull(doubleTapTimeoutMillis) {
+): Modifier = composed {
+    val currentOnDoubleTap by rememberUpdatedState(onDoubleTap)
+    pointerInput(Unit) {
+        val doubleTapTimeoutMillis = viewConfiguration.doubleTapTimeoutMillis
+        awaitEachGesture {
             awaitFirstDown(requireUnconsumed = false)
-        } ?: return@awaitEachGesture
-        secondDown.consume()
-        val secondUp = waitForUpOrCancellation() ?: return@awaitEachGesture
-        secondUp.consume()
-        onDoubleTap()
+            awaitUpOrNullIgnoringConsumed() ?: return@awaitEachGesture
+            val secondDown = withTimeoutOrNull(doubleTapTimeoutMillis) {
+                awaitFirstDown(requireUnconsumed = false)
+            } ?: return@awaitEachGesture
+            secondDown.consume()
+            val secondUp = awaitUpOrNullIgnoringConsumed() ?: return@awaitEachGesture
+            secondUp.consume()
+            currentOnDoubleTap()
+        }
+    }
+}
+
+private suspend fun AwaitPointerEventScope.awaitUpOrNullIgnoringConsumed(): PointerInputChange? {
+    while (true) {
+        val event = awaitPointerEvent()
+        if (event.changes.all { it.changedToUpIgnoreConsumed() }) {
+            return event.changes[0]
+        }
+        if (event.changes.any { it.isOutOfBounds(size, extendedTouchPadding) }) {
+            return null
+        }
     }
 }
 
@@ -1054,29 +1074,35 @@ private fun PostponeDurationsInputField(
     required: Boolean = true,
     onValuesChange: (List<Int>) -> Unit,
 ) {
-    var text by remember(values) { mutableStateOf(formatPostponeDurations(values)) }
+    val textState = remember { TextFieldState(formatPostponeDurations(values)) }
     var wasFocused by remember { mutableStateOf(false) }
 
+    LaunchedEffect(values) {
+        val formatted = formatPostponeDurations(values)
+        if (!wasFocused && textState.text.toString() != formatted) {
+            textState.edit { replace(0, length, formatted) }
+        }
+    }
+
     TextField(
-        value = text,
-        onValueChange = { input ->
-            text = input
-        },
+        state = textState,
         label = { Text(label) },
-        singleLine = true,
+        lineLimits = TextFieldLineLimits.SingleLine,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
         modifier = Modifier
             .fillMaxWidth()
             .onFocusChanged { focusState ->
                 if (wasFocused && !focusState.isFocused) {
-                    val normalizedInput = normalizePostponeDurationInput(text)
+                    val normalizedInput = normalizePostponeDurationInput(textState.text.toString())
                     val normalizedValues = if (required && normalizedInput.isBlank()) {
                         parsePostponeDurations(rawInput = null, fallback = defaultValues)
                     } else {
                         parsePostponeDurations(normalizedInput, fallback = defaultValues)
                     }
                     val normalizedText = formatPostponeDurations(normalizedValues)
-                    text = normalizedText
+                    if (textState.text.toString() != normalizedText) {
+                        textState.edit { replace(0, length, normalizedText) }
+                    }
                     onValuesChange(normalizedValues)
                 }
                 wasFocused = focusState.isFocused
@@ -1092,27 +1118,34 @@ private fun RequiredTextInputField(
     required: Boolean = true,
     onValueChange: (String) -> Unit,
 ) {
-    var text by remember(value) { mutableStateOf(value) }
+    val textState = remember { TextFieldState(value) }
     var wasFocused by remember { mutableStateOf(false) }
 
+    LaunchedEffect(textState) {
+        snapshotFlow { textState.text.toString() }
+            .collect { current -> onValueChange(current) }
+    }
+
+    LaunchedEffect(value) {
+        if (!wasFocused && textState.text.toString() != value) {
+            textState.edit { replace(0, length, value) }
+        }
+    }
+
     TextField(
-        value = text,
-        onValueChange = { input ->
-            text = input
-            onValueChange(input)
-        },
+        state = textState,
         label = { Text(label) },
-        singleLine = true,
+        lineLimits = TextFieldLineLimits.SingleLine,
         modifier = Modifier
             .fillMaxWidth()
             .onFocusChanged { focusState ->
                 if (wasFocused && !focusState.isFocused && required) {
-                    val normalized = text.trim()
+                    val normalized = textState.text.toString().trim()
                     if (normalized.isBlank()) {
-                        text = defaultValue
+                        textState.edit { replace(0, length, defaultValue) }
                         onValueChange(defaultValue)
-                    } else if (normalized != text) {
-                        text = normalized
+                    } else if (normalized != textState.text.toString()) {
+                        textState.edit { replace(0, length, normalized) }
                         onValueChange(normalized)
                     }
                 }
@@ -1131,21 +1164,35 @@ private fun NumberInputField(
     required: Boolean = true,
     onValueChange: (Int) -> Unit,
 ) {
-    var text by remember(value) { mutableStateOf(value.toString()) }
+    val textState = remember { TextFieldState(value.toString()) }
     var wasFocused by remember { mutableStateOf(false) }
-    val parsedValue = text.toIntOrNull()
-    val showRangeWarning = text.isNotEmpty() && (parsedValue == null || parsedValue !in minValue..maxValue)
+    val currentText = textState.text.toString()
+    val parsedValue = currentText.toIntOrNull()
+    val showRangeWarning = currentText.isNotEmpty() && (parsedValue == null || parsedValue !in minValue..maxValue)
+
+    LaunchedEffect(textState) {
+        snapshotFlow { textState.text.toString() }
+            .collect { current ->
+                val digits = current.filter { it.isDigit() }
+                if (digits != current) {
+                    textState.edit { replace(0, length, digits) }
+                    return@collect
+                }
+                val parsed = digits.toIntOrNull()
+                if (parsed != null && parsed in minValue..maxValue) {
+                    onValueChange(parsed)
+                }
+            }
+    }
+
+    LaunchedEffect(value) {
+        if (!wasFocused && textState.text.toString() != value.toString()) {
+            textState.edit { replace(0, length, value.toString()) }
+        }
+    }
 
     TextField(
-        value = text,
-        onValueChange = { input ->
-            val digits = input.filter { it.isDigit() }
-            text = digits
-            val parsed = digits.toIntOrNull() ?: return@TextField
-            if (parsed in minValue..maxValue) {
-                onValueChange(parsed)
-            }
-        },
+        state = textState,
         label = { Text(label) },
         isError = showRangeWarning,
         supportingText = {
@@ -1157,16 +1204,16 @@ private fun NumberInputField(
             }
         },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        singleLine = true,
+        lineLimits = TextFieldLineLimits.SingleLine,
         modifier = Modifier
             .fillMaxWidth()
             .onFocusChanged { focusState ->
                 if (wasFocused && !focusState.isFocused && required) {
-                    val parsed = text.toIntOrNull()
+                    val parsed = textState.text.toString().toIntOrNull()
                     val isValid = parsed != null && parsed in minValue..maxValue
                     if (!isValid) {
                         val safeDefaultValue = defaultValue.coerceIn(minValue, maxValue)
-                        text = safeDefaultValue.toString()
+                        textState.edit { replace(0, length, safeDefaultValue.toString()) }
                         onValueChange(safeDefaultValue)
                     }
                 }

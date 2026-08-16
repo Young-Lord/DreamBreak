@@ -1,5 +1,6 @@
 package moe.lyniko.dreambreak.overlay
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.Configuration
 import android.util.Log
@@ -7,7 +8,6 @@ import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.view.Gravity
@@ -22,6 +22,8 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.net.toUri
+import androidx.core.view.isNotEmpty
 import moe.lyniko.dreambreak.R
 import moe.lyniko.dreambreak.core.BreakPhase
 import moe.lyniko.dreambreak.core.BreakState
@@ -187,6 +189,7 @@ class BreakOverlayController(
         promptView = null
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private fun showFullScreenOverlay(
         state: BreakState,
         overlayBackgroundPortraitUri: String,
@@ -464,7 +467,7 @@ class BreakOverlayController(
             var loaded = false
             for (uriString in candidates) {
                 if (uriReadable(uriString)) {
-                    imageView.setImageURI(Uri.parse(uriString))
+                    imageView.setImageURI(uriString.toUri())
                     loaded = true
                     break
                 }
@@ -524,7 +527,7 @@ class BreakOverlayController(
         if (uriString.isBlank()) {
             return false
         }
-        val uri = runCatching { Uri.parse(uriString.trim()) }.getOrNull() ?: return false
+        val uri = runCatching { uriString.trim().toUri() }.getOrNull() ?: return false
         return runCatching {
             context.contentResolver.openInputStream(uri)?.use { input ->
                 input.read() != -1
@@ -611,7 +614,7 @@ class BreakOverlayController(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                 ).apply {
-                    if (grid.childCount > 0) topMargin = dp(8)
+                    if (grid.isNotEmpty()) topMargin = dp(8)
                 }
             )
         }

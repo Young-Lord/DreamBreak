@@ -8,10 +8,16 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
     <uses-permission
         android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
 
     <application
         android:allowBackup="true"
@@ -19,31 +25,33 @@
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.DreamBreak">
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:label="@string/app_name"
             android:theme="@style/Theme.DreamBreak">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Override long-press on QS tile: handle QS_TILE_PREFERENCES action so system
-                 launches this activity instead of App Info when the user long-presses the tile. -->
+        </activity>
+
+        <activity
+            android:name=".notification.PostponePickerActivity"
+            android:exported="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.DreamBreak">
+            <!-- Override long-press on QS tile: the system sends ACTION_QS_TILE_PREFERENCES.
+                 taskAffinity="" keeps the picker in its own task so Back returns straight to
+                 the previously used app instead of reopening the main task. -->
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
-
-        <activity
-            android:name=".notification.PostponePickerActivity"
-            android:exported="false"
-            android:theme="@style/Theme.DreamBreak" />
 
         <service
             android:name=".notification.BreakReminderService"

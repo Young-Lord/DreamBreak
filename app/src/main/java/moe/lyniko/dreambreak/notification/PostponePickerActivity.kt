@@ -83,7 +83,6 @@ class PostponePickerActivity : ComponentActivity() {
 
     private fun applyExcludeFromRecents(exclude: Boolean) {
         if (!exclude) return
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) return
         val am = getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager ?: return
         am.appTasks.forEach { task ->
             task.setExcludeFromRecents(true)
