@@ -5,6 +5,7 @@
     <string name="notification_action_break_now">立即休息</string>
     <string name="notification_action_postpone">延后</string>
     <string name="nav_home">主页</string>
+    <string name="nav_statistics">统计</string>
     <string name="nav_settings">设置</string>
     <string name="qs_tile_label">梦想封印</string>
     <string name="home_next_small_break">下次小休 %1$s</string>
@@ -22,7 +23,15 @@
     <string name="break_type_small">小休息</string>
     <string name="action_exit">退出</string>
     <string name="action_cancel">取消</string>
+    <string name="action_submit">提交</string>
     <string name="postpone_choose_title">选择延后多久再休息</string>
+    <string name="postpone_reason_title">理由？</string>
+    <string name="postpone_submit_countdown">提交（%1$d）</string>
+    <string name="statistics_title">统计</string>
+    <string name="statistics_recent_postpones">最近的延后选择</string>
+    <string name="statistics_empty">还没有延后选择记录。</string>
+    <string name="statistics_delay_duration">延后时长：%1$s</string>
+    <string name="statistics_reason">选择理由</string>
     <string name="settings_schedule">Schedule</string>
     <string name="settings_reminder">Reminder</string>
     <string name="settings_pause">Pause</string>
@@ -43,6 +52,7 @@
     <string name="settings_top_flash_small_message">小休弹窗提示语</string>
     <string name="settings_top_flash_big_message">大休弹窗提示语</string>
     <string name="settings_postpone_for">延后时长列表（秒，逗号分隔）</string>
+    <string name="settings_postpone_reason_submit_delay_seconds">延后提交等待时间（秒）</string>
     <string name="settings_break_show_postpone_button">休息页面显示“延后”按钮</string>
     <string name="settings_break_show_title">休息页面显示标题</string>
     <string name="settings_break_show_countdown">休息页面显示倒计时</string>

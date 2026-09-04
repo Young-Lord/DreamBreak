@@ -23,7 +23,6 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.net.toUri
-import androidx.core.view.isNotEmpty
 import moe.lyniko.dreambreak.R
 import moe.lyniko.dreambreak.core.BreakPhase
 import moe.lyniko.dreambreak.core.BreakState
@@ -32,7 +31,6 @@ import moe.lyniko.dreambreak.core.OVERLAY_ANIMATION_DURATION_MAX
 import moe.lyniko.dreambreak.core.OVERLAY_ANIMATION_DURATION_MIN
 import moe.lyniko.dreambreak.core.OVERLAY_TRANSPARENCY_MAX
 import moe.lyniko.dreambreak.core.OVERLAY_TRANSPARENCY_MIN
-import moe.lyniko.dreambreak.core.DEFAULT_POSTPONE_DURATIONS_SECONDS
 import moe.lyniko.dreambreak.core.DEFAULT_TOP_FLASH_BIG_TEXT
 import moe.lyniko.dreambreak.core.DEFAULT_TOP_FLASH_SMALL_TEXT
 import moe.lyniko.dreambreak.core.SessionMode
@@ -42,7 +40,7 @@ private const val OVERLAY_LOG_TAG = "DreamBreak"
 class BreakOverlayController(
     private val context: Context,
     private val onExitBreak: (Int) -> Unit,
-    private val onPostponeBreak: (Int) -> Unit,
+    private val onOpenPostponePicker: () -> Unit,
     private val onDismissRequest: (() -> Unit)? = null,
 ) {
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -54,9 +52,7 @@ class BreakOverlayController(
     private var fullTypeView: TextView? = null
     private var fullRemainingView: TextView? = null
     private var fullExitButton: Button? = null
-    private var postponeOptionsPanel: LinearLayout? = null
     private var lastOverlayBackgroundSettingsKey: String = ""
-    private var currentPostponeOptions: List<Int> = DEFAULT_POSTPONE_DURATIONS_SECONDS
     private var currentShowPostponeButton: Boolean = true
     private var currentShowTitle: Boolean = true
     private var currentShowCountdown: Boolean = true
@@ -72,7 +68,6 @@ class BreakOverlayController(
         overlayBackgroundPortraitUri: String,
         overlayBackgroundLandscapeUri: String,
         overlayTransparencyPercent: Int,
-        postponeOptions: List<Int>,
         showPostponeButton: Boolean,
         showTitle: Boolean,
         showCountdown: Boolean,
@@ -96,7 +91,6 @@ class BreakOverlayController(
             return
         }
 
-        val normalizedPostponeOptions = normalizePostponeOptions(postponeOptions)
         val promptText = if (state.isBigBreak) {
             topFlashBigText.ifBlank { DEFAULT_TOP_FLASH_BIG_TEXT }
         } else {
@@ -118,7 +112,6 @@ class BreakOverlayController(
                 overlayBackgroundPortraitUri = overlayBackgroundPortraitUri,
                 overlayBackgroundLandscapeUri = overlayBackgroundLandscapeUri,
                 overlayTransparencyPercent = overlayTransparencyPercent,
-                postponeOptions = normalizedPostponeOptions,
                 showPostponeButton = showPostponeButton,
                 showTitle = showTitle,
                 showCountdown = showCountdown,
@@ -195,7 +188,6 @@ class BreakOverlayController(
         overlayBackgroundPortraitUri: String,
         overlayBackgroundLandscapeUri: String,
         overlayTransparencyPercent: Int,
-        postponeOptions: List<Int>,
         showPostponeButton: Boolean,
         showTitle: Boolean,
         showCountdown: Boolean,
@@ -207,8 +199,7 @@ class BreakOverlayController(
     ) {
         if (
             fullScreenView != null && (
-                currentPostponeOptions != postponeOptions ||
-                    currentShowPostponeButton != showPostponeButton ||
+                currentShowPostponeButton != showPostponeButton ||
                     currentShowTitle != showTitle ||
                     currentShowCountdown != showCountdown ||
                     currentShowExitButton != showExitButton ||
@@ -292,7 +283,6 @@ class BreakOverlayController(
                 backgroundColor = 0xFF5E4F54.toInt(),
                 onClick = {
                     onExitBreak(exitPostponeSeconds)
-                    postponeOptionsPanel?.visibility = View.GONE
                 },
             )
 
@@ -300,11 +290,7 @@ class BreakOverlayController(
                 text = context.getString(R.string.action_postpone),
                 backgroundColor = 0xFF4E6377.toInt(),
                 onClick = {
-                    postponeOptionsPanel?.visibility = if (postponeOptionsPanel?.visibility == View.VISIBLE) {
-                        View.GONE
-                    } else {
-                        View.VISIBLE
-                    }
+                    onOpenPostponePicker()
                 },
             )
 
@@ -345,8 +331,6 @@ class BreakOverlayController(
                 }
             }
 
-            val optionsPanel = buildPostponePanel(postponeOptions)
-
             container.addView(typeView)
             container.addView(remainingView)
 
@@ -368,19 +352,6 @@ class BreakOverlayController(
             }
             if (showExitButton || showPostponeButton) {
                 root.addView(actionRow, actionParams)
-            }
-
-            val optionsParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL,
-            ).apply {
-                bottomMargin = dp(112)
-                leftMargin = dp(28)
-                rightMargin = dp(28)
-            }
-            if (showPostponeButton) {
-                root.addView(optionsPanel, optionsParams)
             }
 
             val params = WindowManager.LayoutParams(
@@ -411,8 +382,6 @@ class BreakOverlayController(
             fullTypeView = typeView
             fullRemainingView = remainingView
             fullExitButton = exitButton
-            postponeOptionsPanel = optionsPanel
-            currentPostponeOptions = postponeOptions
             currentShowPostponeButton = showPostponeButton
             currentShowTitle = showTitle
             currentShowCountdown = showCountdown
@@ -535,95 +504,6 @@ class BreakOverlayController(
         }.getOrDefault(false)
     }
 
-    private fun buildPostponePanel(options: List<Int>): LinearLayout {
-        val panel = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            visibility = View.GONE
-            setPadding(dp(14), dp(14), dp(14), dp(14))
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = dp(18).toFloat()
-                setColor(0xEE1A1A1A.toInt())
-                setStroke(dp(1), 0xFF3A3A3A.toInt())
-            }
-        }
-
-        val title = TextView(context).apply {
-            text = context.getString(R.string.postpone_choose_title)
-            setTextColor(Color.WHITE)
-            textSize = 18f
-            typeface = Typeface.DEFAULT_BOLD
-            gravity = Gravity.CENTER
-        }
-
-        val grid = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setPadding(0, dp(10), 0, 0)
-        }
-
-        options.chunked(2).forEach { chunk ->
-            val row = LinearLayout(context).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER
-            }
-
-            if (chunk.size == 1) {
-                val seconds = chunk.first()
-                row.addView(
-                    createActionButton(
-                        text = formatPostponeOption(seconds),
-                        backgroundColor = 0xFF3A3A3A.toInt(),
-                        onClick = {
-                            onPostponeBreak(seconds)
-                            panel.visibility = View.GONE
-                        },
-                    ),
-                    LinearLayout.LayoutParams(0, dp(52), 1f).apply {
-                        rightMargin = dp(6)
-                    }
-                )
-
-                row.addView(
-                    View(context),
-                    LinearLayout.LayoutParams(0, dp(52), 1f).apply {
-                        leftMargin = dp(6)
-                    }
-                )
-            } else {
-                chunk.forEachIndexed { index, seconds ->
-                    row.addView(
-                        createActionButton(
-                            text = formatPostponeOption(seconds),
-                            backgroundColor = 0xFF3A3A3A.toInt(),
-                            onClick = {
-                                onPostponeBreak(seconds)
-                                panel.visibility = View.GONE
-                            },
-                        ),
-                        LinearLayout.LayoutParams(0, dp(52), 1f).apply {
-                            if (index == 0) rightMargin = dp(6) else leftMargin = dp(6)
-                        }
-                    )
-                }
-            }
-
-            grid.addView(
-                row,
-                LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                ).apply {
-                    if (grid.isNotEmpty()) topMargin = dp(8)
-                }
-            )
-        }
-
-        panel.addView(title)
-        panel.addView(grid)
-        return panel
-    }
-
     private fun createActionButton(
         text: String,
         backgroundColor: Int,
@@ -653,7 +533,6 @@ class BreakOverlayController(
         fullTypeView = null
         fullRemainingView = null
         fullExitButton = null
-        postponeOptionsPanel = null
         lastOverlayBackgroundSettingsKey = ""
         currentShowPostponeButton = true
         currentShowTitle = true
@@ -696,26 +575,6 @@ class BreakOverlayController(
         runCatching {
             view.visibility = View.GONE
             windowManager.removeView(view)
-        }
-    }
-
-    private fun normalizePostponeOptions(options: List<Int>): List<Int> {
-        val normalized = options
-            .filter { it > 0 }
-            .distinct()
-            .sorted()
-        return if (normalized.isNotEmpty()) {
-            normalized
-        } else {
-            DEFAULT_POSTPONE_DURATIONS_SECONDS
-        }
-    }
-
-    private fun formatPostponeOption(seconds: Int): String {
-        return when {
-            seconds % 3600 == 0 -> "${seconds / 3600}h"
-            seconds % 60 == 0 -> "${seconds / 60}m"
-            else -> "${seconds}s"
         }
     }
 

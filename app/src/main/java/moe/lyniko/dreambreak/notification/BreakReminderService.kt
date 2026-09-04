@@ -81,9 +81,11 @@ class BreakReminderService : Service() {
         ensureChannel()
         startInitialForegroundIfNeeded()
         overlayController = BreakOverlayController(
-            this,
+            context = this,
             onExitBreak = { seconds -> BreakRuntime.postponeBreakForSeconds(seconds) },
-            onPostponeBreak = { seconds -> BreakRuntime.postponeBreakForSeconds(seconds) },
+            onOpenPostponePicker = {
+                startActivity(createPostponePickerIntent())
+            },
         )
         ScreenLockMonitor.start(applicationContext)
         // Persist config and cycle counts periodically so a service restart / reboot restores them.
@@ -136,7 +138,6 @@ class BreakReminderService : Service() {
                     overlayBackgroundPortraitUri = uiState.overlayBackgroundPortraitUri,
                     overlayBackgroundLandscapeUri = uiState.overlayBackgroundLandscapeUri,
                     overlayTransparencyPercent = uiState.overlayTransparencyPercent,
-                    postponeOptions = uiState.preferences.postponeFor,
                     showPostponeButton = uiState.breakShowPostponeButton,
                     showTitle = uiState.breakShowTitle,
                     showCountdown = uiState.breakShowCountdown,
@@ -527,15 +528,18 @@ class BreakReminderService : Service() {
         return PendingIntent.getBroadcast(this, action.hashCode(), intent, PendingIntent.FLAG_IMMUTABLE)
     }
 
-    private fun postponePickerPendingIntent(): PendingIntent {
-        val intent = Intent(this, PostponePickerActivity::class.java).apply {
+    private fun createPostponePickerIntent(): Intent {
+        return Intent(this, PostponePickerActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             addFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
         }
+    }
+
+    private fun postponePickerPendingIntent(): PendingIntent {
         return PendingIntent.getActivity(
             this,
             REQUEST_CODE_POSTPONE,
-            intent,
+            createPostponePickerIntent(),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
     }

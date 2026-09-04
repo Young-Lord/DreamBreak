@@ -38,6 +38,7 @@ data class BreakUiState(
     val qsTileCountdownAsTitle: Boolean = false,
     val qsTileClickAction: QsTileClickAction = QsTileClickAction.TOGGLE_ENABLED,
     val breakShowPostponeButton: Boolean = true,
+    val postponeReasonSubmitDelaySeconds: Int = DEFAULT_POSTPONE_REASON_SUBMIT_DELAY_SECONDS,
     val breakShowTitle: Boolean = true,
     val breakShowCountdown: Boolean = true,
     val breakShowExitButton: Boolean = true,
@@ -97,6 +98,10 @@ fun AppSettings.applyToUiState(current: BreakUiState, isFirstLoad: Boolean = fal
         qsTileCountdownAsTitle = qsTileCountdownAsTitle,
         qsTileClickAction = qsTileClickAction,
         breakShowPostponeButton = breakShowPostponeButton,
+        postponeReasonSubmitDelaySeconds = postponeReasonSubmitDelaySeconds.coerceIn(
+            POSTPONE_REASON_SUBMIT_DELAY_MIN_SECONDS,
+            POSTPONE_REASON_SUBMIT_DELAY_MAX_SECONDS,
+        ),
         breakShowTitle = breakShowTitle,
         breakShowCountdown = breakShowCountdown,
         breakShowExitButton = breakShowExitButton,
@@ -140,6 +145,7 @@ fun BreakUiState.toAppSettings(): AppSettings = AppSettings(
     qsTileCountdownAsTitle = qsTileCountdownAsTitle,
     qsTileClickAction = qsTileClickAction,
     breakShowPostponeButton = breakShowPostponeButton,
+    postponeReasonSubmitDelaySeconds = postponeReasonSubmitDelaySeconds,
     breakShowTitle = breakShowTitle,
     breakShowCountdown = breakShowCountdown,
     breakShowExitButton = breakShowExitButton,
@@ -401,6 +407,17 @@ object BreakRuntime {
         updateUiState { current -> current.copy(breakShowPostponeButton = enabled) }
     }
 
+    fun setPostponeReasonSubmitDelaySeconds(seconds: Int) {
+        updateUiState { current ->
+            current.copy(
+                postponeReasonSubmitDelaySeconds = seconds.coerceIn(
+                    POSTPONE_REASON_SUBMIT_DELAY_MIN_SECONDS,
+                    POSTPONE_REASON_SUBMIT_DELAY_MAX_SECONDS,
+                )
+            )
+        }
+    }
+
     fun setBreakExitPostponeSeconds(seconds: Int) {
         updateUiState { current ->
             current.copy(
@@ -472,8 +489,8 @@ object BreakRuntime {
         }
     }
 
-    fun postponeBreakForSeconds(seconds: Int) {
-        updateUiState { current ->
+    fun postponeBreakForSeconds(seconds: Int): Boolean {
+        val updated = updateUiState { current ->
             if (!current.appEnabled) {
                 return@updateUiState current
             }
@@ -493,6 +510,7 @@ object BreakRuntime {
             )
             current.copy(state = next)
         }
+        return updated.appEnabled
     }
 
     fun interruptBreak() {

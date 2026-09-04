@@ -137,6 +137,7 @@ fun SettingsPage(
     qsTileCountdownAsTitle: Boolean,
     qsTileClickAction: QsTileClickAction,
     breakShowPostponeButton: Boolean,
+    postponeReasonSubmitDelaySeconds: Int,
     breakShowTitle: Boolean,
     breakShowCountdown: Boolean,
     breakShowExitButton: Boolean,
@@ -166,6 +167,7 @@ fun SettingsPage(
     onQsTileCountdownAsTitleChange: (Boolean) -> Unit,
     onQsTileClickActionChange: (QsTileClickAction) -> Unit,
     onBreakShowPostponeButtonChange: (Boolean) -> Unit,
+    onPostponeReasonSubmitDelaySecondsChange: (Int) -> Unit,
     onBreakShowTitleChange: (Boolean) -> Unit,
     onBreakShowCountdownChange: (Boolean) -> Unit,
     onBreakShowExitButtonChange: (Boolean) -> Unit,
@@ -190,7 +192,7 @@ fun SettingsPage(
         BreakOverlayController(
             context = context.applicationContext,
             onExitBreak = { _ -> overlayPreviewVisible = false },
-            onPostponeBreak = { _ -> overlayPreviewVisible = false },
+            onOpenPostponePicker = { overlayPreviewVisible = false },
             onDismissRequest = { overlayPreviewVisible = false },
         )
     }
@@ -286,7 +288,6 @@ fun SettingsPage(
             overlayBackgroundPortraitUri = overlayBackgroundPortraitUri,
             overlayBackgroundLandscapeUri = overlayBackgroundLandscapeUri,
             overlayTransparencyPercent = overlayTransparencyPercent,
-            postponeOptions = preferences.postponeFor,
             showPostponeButton = breakShowPostponeButton,
             showTitle = breakShowTitle,
             showCountdown = breakShowCountdown,
@@ -467,6 +468,14 @@ fun SettingsPage(
             values = preferences.postponeFor,
             defaultValues = defaultPreferences.postponeFor,
             onValuesChange = { onPreferencesChange(preferences.copy(postponeFor = it)) },
+        )
+        NumberInputField(
+            label = stringResource(R.string.settings_postpone_reason_submit_delay_seconds),
+            value = postponeReasonSubmitDelaySeconds,
+            minValue = 0,
+            maxValue = 30,
+            defaultValue = 5,
+            onValueChange = onPostponeReasonSubmitDelaySecondsChange,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.settings_break_show_postpone_button), modifier = Modifier.weight(1f))

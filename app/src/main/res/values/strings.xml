@@ -5,6 +5,7 @@
     <string name="notification_action_break_now">Break now</string>
     <string name="notification_action_postpone">Postpone</string>
     <string name="nav_home">Home</string>
+    <string name="nav_statistics">Statistics</string>
     <string name="nav_settings">Settings</string>
     <string name="qs_tile_label">Dream Break</string>
     <string name="home_next_small_break">Next small break %1$s</string>
@@ -22,7 +23,15 @@
     <string name="break_type_small">Small break</string>
     <string name="action_exit">Exit</string>
     <string name="action_cancel">Cancel</string>
+    <string name="action_submit">Submit</string>
     <string name="postpone_choose_title">Choose postpone duration</string>
+    <string name="postpone_reason_title">Reason?</string>
+    <string name="postpone_submit_countdown">Submit (%1$d)</string>
+    <string name="statistics_title">Statistics</string>
+    <string name="statistics_recent_postpones">Recent postpone decisions</string>
+    <string name="statistics_empty">No postpone decisions yet.</string>
+    <string name="statistics_delay_duration">Delay duration: %1$s</string>
+    <string name="statistics_reason">Reason</string>
     <string name="settings_schedule">Schedule</string>
     <string name="settings_reminder">Reminder</string>
     <string name="settings_pause">Pause</string>
@@ -43,6 +52,7 @@
     <string name="settings_top_flash_small_message">Top flash text (small break)</string>
     <string name="settings_top_flash_big_message">Top flash text (big break)</string>
     <string name="settings_postpone_for">Postpone durations (sec, comma-separated)</string>
+    <string name="settings_postpone_reason_submit_delay_seconds">Postpone submit delay (sec)</string>
     <string name="settings_break_show_postpone_button">Show postpone button in break page</string>
     <string name="settings_break_show_title">Show break title in break page</string>
     <string name="settings_break_show_countdown">Show countdown in break page</string>

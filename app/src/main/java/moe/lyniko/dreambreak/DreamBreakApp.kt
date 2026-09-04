@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -53,6 +54,7 @@ import moe.lyniko.dreambreak.ui.home.HomePage
 import moe.lyniko.dreambreak.ui.onboarding.OnboardingScreen
 import moe.lyniko.dreambreak.ui.settings.SettingsPage
 import moe.lyniko.dreambreak.ui.settings.parsePackageList
+import moe.lyniko.dreambreak.ui.statistics.StatisticsPage
 import moe.lyniko.dreambreak.ui.theme.DreamBreakTheme
 
 @Composable
@@ -217,6 +219,8 @@ fun DreamBreakApp() {
                             },
                         )
 
+                        AppDestinations.STATISTICS -> StatisticsPage()
+
                         AppDestinations.SETTINGS -> SettingsPage(
                             preferences = uiState.preferences,
                             pauseInListedApps = uiState.pauseInListedApps,
@@ -243,6 +247,7 @@ fun DreamBreakApp() {
                             qsTileCountdownAsTitle = uiState.qsTileCountdownAsTitle,
                             qsTileClickAction = uiState.qsTileClickAction,
                             breakShowPostponeButton = uiState.breakShowPostponeButton,
+                            postponeReasonSubmitDelaySeconds = uiState.postponeReasonSubmitDelaySeconds,
                             breakShowTitle = uiState.breakShowTitle,
                             breakShowCountdown = uiState.breakShowCountdown,
                             breakShowExitButton = uiState.breakShowExitButton,
@@ -384,6 +389,10 @@ fun DreamBreakApp() {
                                 BreakRuntime.setBreakShowPostponeButton(it)
                                 commitSettings()
                             },
+                            onPostponeReasonSubmitDelaySecondsChange = {
+                                BreakRuntime.setPostponeReasonSubmitDelaySeconds(it)
+                                commitSettings()
+                            },
                             onBreakShowTitleChange = {
                                 BreakRuntime.setBreakShowTitle(it)
                                 commitSettings()
@@ -432,6 +441,7 @@ fun DreamBreakApp() {
 
 private enum class AppDestinations(val labelRes: Int, val icon: ImageVector) {
     HOME(R.string.nav_home, Icons.Default.Home),
+    STATISTICS(R.string.nav_statistics, Icons.AutoMirrored.Filled.List),
     SETTINGS(R.string.nav_settings, Icons.Default.Settings),
 }
 

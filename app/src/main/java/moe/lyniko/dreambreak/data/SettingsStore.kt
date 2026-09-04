@@ -15,6 +15,7 @@ import moe.lyniko.dreambreak.core.BREAK_EXIT_POSTPONE_MIN
 import moe.lyniko.dreambreak.core.DEFAULT_PERSISTENT_NOTIFICATION_CONTENT_TEMPLATE
 import moe.lyniko.dreambreak.core.DEFAULT_PERSISTENT_NOTIFICATION_TITLE_TEMPLATE
 import moe.lyniko.dreambreak.core.DEFAULT_POSTPONE_DURATION_SECONDS
+import moe.lyniko.dreambreak.core.DEFAULT_POSTPONE_REASON_SUBMIT_DELAY_SECONDS
 import moe.lyniko.dreambreak.core.FLASH_FOR_MAX
 import moe.lyniko.dreambreak.core.FLASH_FOR_MIN
 import moe.lyniko.dreambreak.core.NOTIFICATION_FREQUENCY_MAX
@@ -23,6 +24,8 @@ import moe.lyniko.dreambreak.core.OVERLAY_ANIMATION_DURATION_MAX
 import moe.lyniko.dreambreak.core.OVERLAY_ANIMATION_DURATION_MIN
 import moe.lyniko.dreambreak.core.OVERLAY_TRANSPARENCY_MAX
 import moe.lyniko.dreambreak.core.OVERLAY_TRANSPARENCY_MIN
+import moe.lyniko.dreambreak.core.POSTPONE_REASON_SUBMIT_DELAY_MAX_SECONDS
+import moe.lyniko.dreambreak.core.POSTPONE_REASON_SUBMIT_DELAY_MIN_SECONDS
 import moe.lyniko.dreambreak.core.PRE_BREAK_LEAD_SECONDS_MAX
 import moe.lyniko.dreambreak.core.PRE_BREAK_LEAD_SECONDS_MIN
 import moe.lyniko.dreambreak.core.formatPostponeDurations
@@ -51,6 +54,7 @@ data class AppSettings(
     val qsTileCountdownAsTitle: Boolean = false,
     val qsTileClickAction: QsTileClickAction = QsTileClickAction.TOGGLE_ENABLED,
     val breakShowPostponeButton: Boolean = true,
+    val postponeReasonSubmitDelaySeconds: Int = DEFAULT_POSTPONE_REASON_SUBMIT_DELAY_SECONDS,
     val breakShowTitle: Boolean = true,
     val breakShowCountdown: Boolean = true,
     val breakShowExitButton: Boolean = true,
@@ -144,6 +148,13 @@ class SettingsStore(private val context: Context) {
             qsTileCountdownAsTitle = prefs[Keys.QS_TILE_COUNTDOWN_AS_TITLE] ?: false,
             qsTileClickAction = QsTileClickAction.fromStorage(prefs[Keys.QS_TILE_CLICK_ACTION]),
             breakShowPostponeButton = prefs[Keys.BREAK_SHOW_POSTPONE_BUTTON] ?: true,
+            postponeReasonSubmitDelaySeconds =
+                (prefs[Keys.POSTPONE_REASON_SUBMIT_DELAY_SECONDS]
+                    ?: DEFAULT_POSTPONE_REASON_SUBMIT_DELAY_SECONDS)
+                    .coerceIn(
+                        POSTPONE_REASON_SUBMIT_DELAY_MIN_SECONDS,
+                        POSTPONE_REASON_SUBMIT_DELAY_MAX_SECONDS,
+                    ),
             breakShowTitle = prefs[Keys.BREAK_SHOW_TITLE] ?: true,
             breakShowCountdown = prefs[Keys.BREAK_SHOW_COUNTDOWN] ?: true,
             breakShowExitButton = prefs[Keys.BREAK_SHOW_EXIT_BUTTON] ?: true,
@@ -225,6 +236,11 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.QS_TILE_COUNTDOWN_AS_TITLE] = settings.qsTileCountdownAsTitle
             prefs[Keys.QS_TILE_CLICK_ACTION] = settings.qsTileClickAction.storageValue
             prefs[Keys.BREAK_SHOW_POSTPONE_BUTTON] = settings.breakShowPostponeButton
+            prefs[Keys.POSTPONE_REASON_SUBMIT_DELAY_SECONDS] =
+                settings.postponeReasonSubmitDelaySeconds.coerceIn(
+                    POSTPONE_REASON_SUBMIT_DELAY_MIN_SECONDS,
+                    POSTPONE_REASON_SUBMIT_DELAY_MAX_SECONDS,
+                )
             prefs[Keys.BREAK_SHOW_TITLE] = settings.breakShowTitle
             prefs[Keys.BREAK_SHOW_COUNTDOWN] = settings.breakShowCountdown
             prefs[Keys.BREAK_SHOW_EXIT_BUTTON] = settings.breakShowExitButton
@@ -302,6 +318,8 @@ class SettingsStore(private val context: Context) {
         val QS_TILE_COUNTDOWN_AS_TITLE = booleanPreferencesKey("qs_tile_countdown_as_title")
         val QS_TILE_CLICK_ACTION = intPreferencesKey("qs_tile_click_action")
         val BREAK_SHOW_POSTPONE_BUTTON = booleanPreferencesKey("break_show_postpone_button")
+        val POSTPONE_REASON_SUBMIT_DELAY_SECONDS =
+            intPreferencesKey("postpone_reason_submit_delay_seconds")
         val BREAK_SHOW_TITLE = booleanPreferencesKey("break_show_title")
         val BREAK_SHOW_COUNTDOWN = booleanPreferencesKey("break_show_countdown")
         val BREAK_SHOW_EXIT_BUTTON = booleanPreferencesKey("break_show_exit_button")
