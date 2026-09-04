@@ -43,9 +43,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import moe.lyniko.dreambreak.R
 import moe.lyniko.dreambreak.core.BreakRuntime
 import moe.lyniko.dreambreak.core.formatPostponeOption
@@ -87,13 +85,11 @@ class PostponePickerActivity : ComponentActivity() {
                     onConfirm = { seconds, reason ->
                         val accepted = BreakRuntime.postponeBreakForSeconds(seconds)
                         if (accepted) {
-                            lifecycleScope.launch {
-                                HistoryRepository.getInstance(applicationContext).recordPostponeDecision(
-                                    confirmedAtEpochMillis = System.currentTimeMillis(),
-                                    delayDurationSeconds = seconds,
-                                    reason = reason,
-                                )
-                            }
+                            HistoryRepository.getInstance(applicationContext).recordPostponeDecision(
+                                confirmedAtEpochMillis = System.currentTimeMillis(),
+                                delayDurationSeconds = seconds,
+                                reason = reason,
+                            )
                         }
                         Log.d("DreamBreak", "PostponePicker selected seconds=$seconds accepted=$accepted")
                         finish()

@@ -1,7 +1,11 @@
 package moe.lyniko.dreambreak.data.history
 
 import android.content.Context
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 import moe.lyniko.dreambreak.core.BreakUiState
 import moe.lyniko.dreambreak.core.PauseReason
 import moe.lyniko.dreambreak.core.SessionMode
@@ -20,22 +24,26 @@ enum class RecordedRuntimeState {
 class HistoryRepository private constructor(
     private val historyDao: HistoryDao,
 ) {
+    private val writeScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     fun observeRecentPostponeDecisions(): Flow<List<PostponeDecisionEntity>> {
         return historyDao.observeRecentPostponeDecisions(RECENT_POSTPONE_DECISION_LIMIT)
     }
 
-    suspend fun recordPostponeDecision(
+    fun recordPostponeDecision(
         confirmedAtEpochMillis: Long,
         delayDurationSeconds: Int,
         reason: String,
     ) {
-        historyDao.insertPostponeDecision(
-            PostponeDecisionEntity(
-                confirmedAtEpochMillis = confirmedAtEpochMillis,
-                delayDurationSeconds = delayDurationSeconds.coerceAtLeast(1),
-                reason = reason.trim(),
-            )
+        val decision = PostponeDecisionEntity(
+            confirmedAtEpochMillis = confirmedAtEpochMillis,
+            delayDurationSeconds = delayDurationSeconds.coerceAtLeast(1),
+            reason = reason.trim(),
         )
+
+        writeScope.launch {
+            historyDao.insertPostponeDecision(decision)
+        }
     }
 
     suspend fun recordRuntimeState(
