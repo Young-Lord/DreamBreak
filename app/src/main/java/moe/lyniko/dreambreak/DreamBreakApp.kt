@@ -17,7 +17,9 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
@@ -25,7 +27,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -43,8 +44,6 @@ import moe.lyniko.dreambreak.data.AppSettings
 import moe.lyniko.dreambreak.data.SettingsStore
 import moe.lyniko.dreambreak.monitor.AppPauseMonitor
 import moe.lyniko.dreambreak.monitor.ForegroundAppMonitor
-import moe.lyniko.dreambreak.monitor.InstalledApp
-import moe.lyniko.dreambreak.monitor.InstalledAppsProvider
 import moe.lyniko.dreambreak.monitor.ScreenLockMonitor
 import moe.lyniko.dreambreak.monitor.shouldPauseForForegroundApp
 import moe.lyniko.dreambreak.notification.BreakReminderService
@@ -83,10 +82,6 @@ fun DreamBreakApp() {
         scope.launch {
             settingsStore.save(toSave)
         }
-    }
-
-    val installedApps by produceState(initialValue = emptyList<InstalledApp>(), key1 = Unit) {
-        value = InstalledAppsProvider.loadLaunchableApps(context.applicationContext)
     }
 
     var overlayPickerTarget by remember { mutableStateOf(OverlayImageTarget.PORTRAIT) }
@@ -158,6 +153,10 @@ fun DreamBreakApp() {
     }
 
     if (!settingsLoaded) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background,
+        ) {}
         return
     }
 
@@ -228,7 +227,6 @@ fun DreamBreakApp() {
                             monitoredApps = uiState.monitoredApps,
                             monitoredAppsBlacklist = uiState.monitoredAppsBlacklist,
                             hasUsageAccess = hasUsageAccess,
-                            installedApps = installedApps,
                             autoStartOnBoot = uiState.autoStartOnBoot,
                             restoreEnabledStateOnStart = uiState.restoreEnabledStateOnStart,
                             reenableOnScreenUnlock = uiState.reenableOnScreenUnlock,

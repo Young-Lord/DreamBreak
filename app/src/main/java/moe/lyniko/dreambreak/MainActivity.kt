@@ -18,12 +18,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import moe.lyniko.dreambreak.core.BreakRuntime
 import moe.lyniko.dreambreak.data.AppThemeMode
 import moe.lyniko.dreambreak.ui.theme.DreamBreakTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         BreakRuntime.start()
         enableEdgeToEdge()

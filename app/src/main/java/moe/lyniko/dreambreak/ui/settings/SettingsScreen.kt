@@ -32,6 +32,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -72,8 +73,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.roundToInt
 import moe.lyniko.dreambreak.MainActivity
@@ -93,6 +96,7 @@ import moe.lyniko.dreambreak.data.AppListMode
 import moe.lyniko.dreambreak.data.AppThemeMode
 import moe.lyniko.dreambreak.data.QsTileClickAction
 import moe.lyniko.dreambreak.monitor.InstalledApp
+import moe.lyniko.dreambreak.monitor.InstalledAppsProvider
 import moe.lyniko.dreambreak.notification.BreakReminderService
 import moe.lyniko.dreambreak.overlay.BreakOverlayController
 import moe.lyniko.dreambreak.tile.DreamBreakTileService
@@ -121,7 +125,6 @@ fun SettingsPage(
     monitoredApps: String,
     monitoredAppsBlacklist: String,
     hasUsageAccess: Boolean,
-    installedApps: List<InstalledApp>,
     autoStartOnBoot: Boolean,
     restoreEnabledStateOnStart: Boolean,
     reenableOnScreenUnlock: Boolean,
@@ -187,6 +190,7 @@ fun SettingsPage(
     }
     val appSearch = rememberTextFieldState()
     var showPauseAppListPage by remember { mutableStateOf(false) }
+    var installedApps by remember { mutableStateOf<List<InstalledApp>?>(null) }
     var overlayPreviewVisible by remember { mutableStateOf(false) }
     val previewController = remember(context.applicationContext) {
         BreakOverlayController(
@@ -206,6 +210,11 @@ fun SettingsPage(
     LaunchedEffect(showPauseAppListPage) {
         if (showPauseAppListPage) {
             overlayPreviewVisible = false
+            if (installedApps == null) {
+                installedApps = withContext(Dispatchers.IO) {
+                    InstalledAppsProvider.loadLaunchableApps(appContext)
+                }
+            }
         }
     }
 
@@ -310,14 +319,14 @@ fun SettingsPage(
     }
 
     if (showPauseAppListPage) {
-        // 仅当列表页可见时才计算过滤结果，并用 remember 缓存，避免每次输入都重排整页列表。
+        val loadedInstalledApps = installedApps
         val searchText = appSearch.text.toString()
-        val filteredApps = remember(searchText, installedApps) {
-            installedApps.filter {
+        val filteredApps = remember(searchText, loadedInstalledApps) {
+            loadedInstalledApps?.filter { installedApp ->
                 searchText.isBlank() ||
-                    it.label.contains(searchText, ignoreCase = true) ||
-                    it.packageName.contains(searchText, ignoreCase = true)
-            }
+                    installedApp.label.contains(searchText, ignoreCase = true) ||
+                    installedApp.packageName.contains(searchText, ignoreCase = true)
+            }.orEmpty()
         }
 
         Column(modifier = Modifier.fillMaxSize()) {
@@ -354,20 +363,31 @@ fun SettingsPage(
                 )
             }
 
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                AppSelectionSection(
-                    appSearch = appSearch,
-                    selectedPackages = selectedPackages,
-                    filteredApps = filteredApps,
-                    onMonitoredAppsChange = onMonitoredAppsChange,
-                )
+            if (loadedInstalledApps == null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    AppSelectionSection(
+                        appSearch = appSearch,
+                        selectedPackages = selectedPackages,
+                        filteredApps = filteredApps,
+                        onMonitoredAppsChange = onMonitoredAppsChange,
+                    )
+                }
             }
         }
         return

@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.DreamBreak" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.DreamBreak" parent="android:Theme.Material.NoActionBar" />
 
     <style name="Theme.DreamBreak.Starting" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">#FFFBFE</item>
+        <item name="windowSplashScreenBackground">#1B1B1F</item>
         <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
         <item name="postSplashScreenTheme">@style/Theme.DreamBreak</item>
     </style>
